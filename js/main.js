@@ -135,14 +135,34 @@ function updateVisualEffects(dt) {
   // Parallax moon rotation drift
   state.rotateMoon += dt * 0.04;
 
-  // Update particle physics
+  // Update particle physics (with gravity + slight drag on explosion debris)
   for (let i = state.particles.length - 1; i >= 0; i--) {
     const p = state.particles[i];
+    if (p.grav) {
+      p.vy += dt * 1.6;
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+    }
     p.x += p.vx;
     p.y += p.vy;
     p.life -= dt;
     if (p.life <= 0) {
       state.particles.splice(i, 1);
+    }
+  }
+
+  // Update spinning wireframe debris shards
+  for (let i = state.debris.length - 1; i >= 0; i--) {
+    const d = state.debris[i];
+    d.vy += dt * 1.4;
+    d.vx *= 0.99;
+    d.vy *= 0.99;
+    d.x += d.vx;
+    d.y += d.vy;
+    d.rot += d.vr;
+    d.life -= dt;
+    if (d.life <= 0) {
+      state.debris.splice(i, 1);
     }
   }
 
@@ -163,13 +183,15 @@ function updateVisualEffects(dt) {
       const nozzleY = state.ship.y - Math.sin(state.ship.angle) * 4;
       const angleSpread = state.ship.angle + Math.PI + (Math.random() - 0.5) * 0.5;
       const spd = Math.random() * 1.6 + 0.6;
+      const sparkLife = Math.random() * 0.35 + 0.12;
       state.particles.push({
         x: nozzleX,
         y: nozzleY,
         vx: Math.cos(angleSpread) * spd + state.ship.vx * 0.2,
         vy: Math.sin(angleSpread) * spd + state.ship.vy * 0.2,
-        color: "#ff6600",
-        life: Math.random() * 0.35 + 0.12,
+        color: Math.random() < 0.3 ? "#ffcc44" : "#ff6600",
+        life: sparkLife,
+        maxLife: sparkLife,
         size: 1.0
       });
     }

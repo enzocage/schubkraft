@@ -480,6 +480,8 @@ export const state = {
   projectiles: [],
   particles: [],
   shockwaves: [],
+  debris: [],
+  cam: { x: 0, y: 0 },
   collisionGrid: {},
   bakedTerrainCanvas: null,
   

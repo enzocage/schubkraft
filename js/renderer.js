@@ -58,11 +58,18 @@ export function renderGame(canvas, ctx) {
     camY = 400 + Math.cos(Date.now() * 0.0002) * 80;
   }
   else if (state.gameState === STATE_PLAYING || state.gameState === STATE_LEVEL_COMPLETE) {
+    // Velocity look-ahead target, smoothed for cinematic camera motion
+    let targetX = state.ship.x + state.ship.vx * 10;
+    let targetY = state.ship.y + state.ship.vy * 10;
     if (state.pod.attached && state.pod.alive) {
-      camX = state.ship.x * 0.55 + state.pod.x * 0.45;
-      camY = state.ship.y * 0.55 + state.pod.y * 0.45;
+      targetX = targetX * 0.55 + state.pod.x * 0.45;
+      targetY = targetY * 0.55 + state.pod.y * 0.45;
     }
-    
+    state.cam.x += (targetX - state.cam.x) * 0.10;
+    state.cam.y += (targetY - state.cam.y) * 0.10;
+    camX = state.cam.x;
+    camY = state.cam.y;
+
     if (state.screenShake > 0) {
       const shakeFactor = state.reactorTimer > 0 && state.reactorTimer < 3.0 ? state.screenShake * 2.0 : state.screenShake;
       camX += (Math.random() - 0.5) * shakeFactor * 0.7;
@@ -93,6 +100,9 @@ export function renderGame(canvas, ctx) {
       color = "rgba(124, 252, 0, 0.35)"; // green tint
     }
     
+    // Twinkle: per-star sinusoidal brightness modulation
+    const twinkle = 0.55 + 0.45 * Math.sin(Date.now() * 0.002 * (1 + (i % 7) * 0.35) + i * 1.7);
+    ctx.globalAlpha = twinkle;
     ctx.strokeStyle = color;
     const sx = ((star.x - camX * speed) % 320 + 320) % 320;
     const sy = ((star.y - camY * speed) % 200 + 200) % 200;
@@ -101,6 +111,7 @@ export function renderGame(canvas, ctx) {
     ctx.lineTo(sx + 0.6, sy);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 
   // 2. Draw rotating wireframe moon background
   drawWireframePlanet(ctx, 160 - (camX * 0.05) % 320, 100 - (camY * 0.05) % 200, 48, state.rotateMoon, "rgba(124, 252, 0, 0.09)");
@@ -153,23 +164,53 @@ export function renderGame(canvas, ctx) {
       ctx.beginPath();
       ctx.arc(ent.x + vJitter(0.8), ent.y + vJitter(0.8), 7 + vJitter(1), Math.PI, 0);
       ctx.stroke();
-      
+
       const angle = ent.angle !== undefined ? ent.angle : (ent.dir === -1 ? Math.PI : 0);
+      // Barrel recoil: snaps back right after firing (bulletTimer just reset)
+      const recoil = ent.bulletTimer !== undefined && ent.bulletTimer < 0.12 ? -2.5 : 0;
+      const barrelLen = 11 + recoil + vJitter(1.5);
+      const muzzleX = ent.x + Math.cos(angle) * barrelLen;
+      const muzzleY = ent.y - 2 + Math.sin(angle) * barrelLen;
       ctx.beginPath();
       ctx.moveTo(ent.x + vJitter(0.6), ent.y - 2 + vJitter(0.6));
-      ctx.lineTo(ent.x + Math.cos(angle) * (11 + vJitter(1.5)), ent.y - 2 + Math.sin(angle) * (11 + vJitter(1.5)));
+      ctx.lineTo(muzzleX, muzzleY);
       ctx.stroke();
+
+      // Charge-up glow: red dot grows at the muzzle as the next shot approaches
+      if (ent.bulletTimer !== undefined && ent.bulletTimer > 0.9) {
+        const charge = Math.min(1, (ent.bulletTimer - 0.9) / 0.5);
+        ctx.save();
+        ctx.fillStyle = `rgba(255, ${Math.floor(80 - charge * 60)}, 40, ${0.35 + charge * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(muzzleX, muzzleY, 0.7 + charge * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      // Muzzle flash right after the shot
+      if (ent.bulletTimer !== undefined && ent.bulletTimer < 0.1) {
+        ctx.save();
+        ctx.strokeStyle = "#ffffff";
+        for (let f = -1; f <= 1; f++) {
+          const fa = angle + f * 0.4;
+          ctx.beginPath();
+          ctx.moveTo(muzzleX, muzzleY);
+          ctx.lineTo(muzzleX + Math.cos(fa) * 5, muzzleY + Math.sin(fa) * 5);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       ctx.save();
       ctx.strokeStyle = "rgba(255, 0, 0, 0.22)";
       ctx.setLineDash([2, 4]);
+      ctx.lineDashOffset = -(Date.now() * 0.01) % 6; // crawling threat line
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(ent.x, ent.y - 2);
       ctx.lineTo(ent.x + Math.cos(angle) * 120, ent.y - 2 + Math.sin(angle) * 120);
       ctx.stroke();
       ctx.restore();
-    } 
+    }
     else if (ent.type === "fuel") {
       ctx.strokeRect(ent.x - 9 + vJitter(1), ent.y - 8 + vJitter(1), 18 + vJitter(2), 16 + vJitter(2));
       ctx.save();
@@ -178,11 +219,15 @@ export function renderGame(canvas, ctx) {
       ctx.restore();
     } 
     else if (ent.type === "reactor") {
-      // Reactor pulse glow gradient background
+      const overload = state.reactorTimer > 0;
+      const t = Date.now() * (overload ? 0.03 : 0.008);
+
+      // Reactor pulse glow gradient background (red + violent when overloading)
       ctx.save();
       ctx.shadowBlur = 0;
+      const glowCol = overload ? "rgba(255, 40, 40, 0.35)" : "rgba(124, 252, 0, 0.22)";
       const grad = ctx.createRadialGradient(ent.x, ent.y, 2, ent.x, ent.y, 16 + Math.sin(Date.now() * 0.012) * 5);
-      grad.addColorStop(0, "rgba(124, 252, 0, 0.22)");
+      grad.addColorStop(0, glowCol);
       grad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -190,36 +235,80 @@ export function renderGame(canvas, ctx) {
       ctx.fill();
       ctx.restore();
 
+      if (overload) {
+        ctx.strokeStyle = Math.floor(Date.now() / 120) % 2 === 0 ? "#ff3333" : objColor;
+        if (state.useBloom) ctx.shadowColor = "#ff3333";
+      }
+
+      // Outer housing
       ctx.strokeRect(ent.x - 12 + vJitter(1.2), ent.y - 12 + vJitter(1.2), 24 + vJitter(2), 24 + vJitter(2));
-      const pulse = 4 + Math.sin(Date.now() * 0.015) * 2;
-      ctx.strokeRect(ent.x - pulse, ent.y - pulse, pulse * 2, pulse * 2);
+
+      // Counter-rotating inner core squares
+      for (let ring = 0; ring < 2; ring++) {
+        const rot = ring === 0 ? t : -t * 1.4;
+        const rad = ring === 0 ? 7 : 4 + Math.sin(Date.now() * 0.015) * 1.5;
+        ctx.save();
+        ctx.translate(ent.x, ent.y);
+        ctx.rotate(rot);
+        ctx.strokeRect(-rad, -rad, rad * 2, rad * 2);
+        ctx.restore();
+      }
+
+      // Energy arcs flickering off the core during overload
+      if (overload && Math.random() < 0.4) {
+        ctx.save();
+        ctx.strokeStyle = "#ffffff";
+        const arcA = Math.random() * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(ent.x + Math.cos(arcA) * 8, ent.y + Math.sin(arcA) * 8);
+        ctx.lineTo(ent.x + Math.cos(arcA + 0.5) * (14 + Math.random() * 6), ent.y + Math.sin(arcA + 0.5) * (14 + Math.random() * 6));
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     else if (ent.type === "door") {
-      ctx.strokeStyle = "#ff2222";
+      // Energy-field force door: pulsing frame + scrolling field lines
+      const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.006);
+      ctx.strokeStyle = `rgba(255, 34, 34, ${pulse})`;
       if (state.useBloom) ctx.shadowColor = "#ff2222";
       ctx.strokeRect(ent.x + vJitter(0.8), ent.y + vJitter(0.8), (ent.w || 8) + vJitter(1), (ent.h || 80) + vJitter(1.5));
       ctx.save();
       ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
-      for (let dy = ent.y + 10; dy < ent.y + (ent.h || 80); dy += 15) {
+      const scroll = (Date.now() * 0.02) % 15;
+      const doorH = ent.h || 80;
+      const doorW = ent.w || 8;
+      for (let dy = ent.y + scroll; dy < ent.y + doorH; dy += 15) {
+        const lineAlpha = 0.4 + 0.6 * Math.abs(Math.sin(dy * 0.3 + Date.now() * 0.008));
+        ctx.strokeStyle = `rgba(255, 80, 80, ${lineAlpha})`;
         ctx.beginPath();
         ctx.moveTo(ent.x, dy);
-        ctx.lineTo(ent.x + (ent.w || 8), dy - 4);
+        ctx.lineTo(ent.x + doorW, dy - 4);
         ctx.stroke();
       }
       ctx.restore();
     }
     else if (ent.type === "switch") {
-      ctx.strokeStyle = "#00ffff";
+      // Pulsing beacon so switches read as interactive
+      const swPulse = 0.55 + 0.45 * Math.sin(Date.now() * 0.008);
+      ctx.strokeStyle = `rgba(0, 255, 255, ${swPulse})`;
       if (state.useBloom) ctx.shadowColor = "#00ffff";
       ctx.strokeRect(ent.x - 5 + vJitter(0.7), ent.y - 5 + vJitter(0.7), 10 + vJitter(1.5), 10 + vJitter(1.5));
       ctx.beginPath();
       ctx.moveTo(ent.x, ent.y);
       ctx.lineTo(ent.x + 4, ent.y - 6);
       ctx.stroke();
+      // Expanding ping ring
+      const ping = (Date.now() % 1600) / 1600;
+      ctx.save();
+      ctx.globalAlpha = (1 - ping) * 0.5;
+      ctx.beginPath();
+      ctx.arc(ent.x, ent.y, 6 + ping * 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
-  // 5. Draw Pod
+  // 5. Draw Pod (with slowly rotating orbital tick marks)
   if (state.pod.alive) {
     ctx.strokeStyle = objColor;
     if (state.useBloom) ctx.shadowColor = objColor;
@@ -230,6 +319,31 @@ export function renderGame(canvas, ctx) {
     ctx.beginPath();
     ctx.arc(state.pod.x + vJitter(1), state.pod.y + vJitter(1), 2 + vJitter(0.5), 0, Math.PI * 2);
     ctx.stroke();
+
+    const podRot = Date.now() * 0.0012;
+    for (let k = 0; k < 3; k++) {
+      const a = podRot + k * (Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.moveTo(state.pod.x + Math.cos(a) * 5, state.pod.y + Math.sin(a) * 5);
+      ctx.lineTo(state.pod.x + Math.cos(a) * 7.5, state.pod.y + Math.sin(a) * 7.5);
+      ctx.stroke();
+    }
+
+    // Highlight halo while not yet attached and ship is near (tractor range hint)
+    if (!state.pod.attached && state.ship.alive) {
+      const dx = state.ship.x - state.pod.x;
+      const dy = state.ship.y - state.pod.y;
+      if (dx * dx + dy * dy < 36 * 36) {
+        const hint = (Date.now() % 900) / 900;
+        ctx.save();
+        ctx.globalAlpha = (1 - hint) * 0.5;
+        ctx.strokeStyle = "#00ffff";
+        ctx.beginPath();
+        ctx.arc(state.pod.x, state.pod.y, 7 + hint * 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
   }
 
   // 6. Draw Spaceship
@@ -261,13 +375,23 @@ export function renderGame(canvas, ctx) {
       ctx.fill();
       ctx.restore();
 
+      // Two-layer animated flame: orange outer cone + white-hot inner jet
+      const flameLength = 6 + Math.random() * 8;
       ctx.strokeStyle = "#ff8800";
       if (state.useBloom) ctx.shadowColor = "#ff8800";
-      const flameLength = 5 + Math.random() * 8;
+      ctx.beginPath();
+      ctx.moveTo(-3, -1.6);
+      ctx.lineTo(-3 - flameLength * 0.6, -1 + Math.random() * 2 - 1);
+      ctx.lineTo(-3 - flameLength, (Math.random() - 0.5) * 1.5);
+      ctx.lineTo(-3 - flameLength * 0.6, 1 + Math.random() * 2 - 1);
+      ctx.lineTo(-3, 1.6);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#ffee99";
+      if (state.useBloom) ctx.shadowColor = "#ffee99";
       ctx.beginPath();
       ctx.moveTo(-3, 0);
-      ctx.lineTo(-3 - flameLength, -2 + Math.random()*4);
-      ctx.lineTo(-3, 0);
+      ctx.lineTo(-3 - flameLength * 0.55, (Math.random() - 0.5) * 1.2);
       ctx.stroke();
     }
     ctx.restore();
@@ -306,17 +430,40 @@ export function renderGame(canvas, ctx) {
       ctx.restore();
     } 
     else if (state.ship.tractorBeamActive && state.ship.tractorTarget) {
+      // Undulating energy beam with pulses travelling toward the ship
       const target = state.ship.tractorTarget;
       ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
       if (state.useBloom) ctx.shadowColor = "#00ffff";
       ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
-      
-      ctx.beginPath();
-      ctx.moveTo(state.ship.x, state.ship.y);
-      ctx.lineTo(target.x - 4, target.y);
-      ctx.moveTo(state.ship.x, state.ship.y);
-      ctx.lineTo(target.x + 4, target.y);
-      ctx.stroke();
+
+      const bdx = target.x - state.ship.x;
+      const bdy = target.y - state.ship.y;
+      const blen = Math.sqrt(bdx * bdx + bdy * bdy) || 1;
+      const pnx = -bdy / blen; // perpendicular
+      const pny = bdx / blen;
+      const tNow = Date.now() * 0.012;
+
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.beginPath();
+        ctx.moveTo(state.ship.x, state.ship.y);
+        const SEGS = 6;
+        for (let s2 = 1; s2 <= SEGS; s2++) {
+          const f = s2 / SEGS;
+          const wob = Math.sin(f * Math.PI * 3 - tNow) * 2.5 * side * Math.sin(f * Math.PI);
+          ctx.lineTo(
+            state.ship.x + bdx * f + pnx * (wob + side * 4 * f),
+            state.ship.y + bdy * f + pny * (wob + side * 4 * f)
+          );
+        }
+        ctx.stroke();
+      }
+
+      // Energy pulse dots flowing from target to ship
+      ctx.fillStyle = "rgba(180, 255, 255, 0.9)";
+      for (let pd = 0; pd < 3; pd++) {
+        const f = 1 - ((Date.now() * 0.0009 + pd * 0.33) % 1);
+        ctx.fillRect(state.ship.x + bdx * f - 0.7, state.ship.y + bdy * f - 0.7, 1.4, 1.4);
+      }
     }
   }
 
@@ -333,11 +480,24 @@ export function renderGame(canvas, ctx) {
     ctx.stroke();
   }
 
-  // 8. Projectiles lines
-  ctx.strokeStyle = "#ffffff";
-  if (state.useBloom) ctx.shadowColor = "#ffffff";
+  // 8. Projectiles — bright core + faded longer trail; enemy shots are red
   ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
   for (const p of state.projectiles) {
+    const col = p.enemy ? "#ff4444" : "#ffffff";
+    if (state.useBloom) ctx.shadowColor = col;
+
+    // Faded trail
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(p.x - p.vx * 0.9, p.y - p.vy * 0.9);
+    ctx.lineTo(p.x - p.vx * 2.4, p.y - p.vy * 2.4);
+    ctx.stroke();
+    ctx.restore();
+
+    // Hot core
+    ctx.strokeStyle = col;
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
     ctx.lineTo(p.x - p.vx * 0.9, p.y - p.vy * 0.9);
@@ -346,8 +506,9 @@ export function renderGame(canvas, ctx) {
 
   ctx.shadowBlur = 0; // Disable shadow glow
 
-  // 9. Explosion & Rocket sparks
+  // 9. Explosion & Rocket sparks — alpha fades out over lifetime
   for (const p of state.particles) {
+    ctx.globalAlpha = p.maxLife ? Math.max(0, p.life / p.maxLife) : 1;
     ctx.strokeStyle = p.color;
     ctx.lineWidth = p.size * dpr / Math.min(scaleX, scaleY);
     ctx.beginPath();
@@ -355,6 +516,21 @@ export function renderGame(canvas, ctx) {
     ctx.lineTo(p.x - p.vx * 0.55, p.y - p.vy * 0.55);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
+
+  // 9b. Spinning wireframe debris shards
+  ctx.lineWidth = (1.2 * dpr) / Math.min(scaleX, scaleY);
+  for (const d of state.debris) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, d.life / 0.6));
+    ctx.strokeStyle = d.color;
+    const dx = Math.cos(d.rot) * d.len;
+    const dy = Math.sin(d.rot) * d.len;
+    ctx.beginPath();
+    ctx.moveTo(d.x - dx, d.y - dy);
+    ctx.lineTo(d.x + dx, d.y + dy);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   // 10. Expanding Shockwaves rendering
   ctx.save();
@@ -366,6 +542,11 @@ export function renderGame(canvas, ctx) {
     ctx.globalAlpha = alpha;
     ctx.beginPath();
     ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    // Trailing inner ring for depth
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.radius * 0.62, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
@@ -452,9 +633,20 @@ export function renderHUD(ctx, dpr, scaleX, scaleY) {
   ctx.stroke();
 
   const displayFuel = Math.ceil(state.ship.fuel);
-  const fuelColor = displayFuel < 250 ? "#ff2222" : hudColor;
+  const lowFuel = displayFuel < 250;
+  const fuelColor = lowFuel ? "#ff2222" : hudColor;
 
   drawVectorText(ctx, `FUEL: ${displayFuel.toString().padStart(4, '0')}`, 10, 8, 0.28, fuelColor);
+
+  // Fuel gauge bar (blinks when low)
+  const fuelFrac = Math.max(0, Math.min(1, state.ship.fuel / (state.activeLevel.fuel || 1)));
+  const barBlink = !lowFuel || Math.floor(Date.now() / 250) % 2 === 0;
+  ctx.strokeStyle = "rgba(124, 252, 0, 0.3)";
+  ctx.strokeRect(10, 22, 60, 4);
+  if (barBlink) {
+    ctx.fillStyle = fuelColor;
+    ctx.fillRect(11, 23, 58 * fuelFrac, 2);
+  }
   drawVectorText(ctx, `LIVES: ${state.lives}`, 125, 8, 0.28, hudColor);
   drawVectorText(ctx, `SCORE: ${state.score.toString().padStart(6, '0')}`, 205, 8, 0.28, hudColor);
 
@@ -488,8 +680,37 @@ export function renderTitleScreen(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.fillRect(0, 0, 320, 200);
 
+  // Pulsing glow behind the title
+  const titlePulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.002);
+  ctx.save();
+  if (state.useBloom) {
+    ctx.shadowBlur = 8 + titlePulse * 10;
+    ctx.shadowColor = "#7CFC00";
+  }
   drawVectorText(ctx, "THRUST", 75, 34, 1.4, "#7CFC00");
+  ctx.restore();
   drawVectorText(ctx, "HTML5 SPECIAL EDITION", 68, 64, 0.32, "#ffffff");
+
+  // Tiny demo ship flying across the title screen with flame
+  const flyT = (Date.now() % 9000) / 9000;
+  const shipX = -20 + flyT * 360;
+  const shipY = 48 + Math.sin(flyT * Math.PI * 4) * 10;
+  ctx.save();
+  ctx.translate(shipX, shipY);
+  ctx.rotate(Math.sin(flyT * Math.PI * 4) * 0.3);
+  ctx.strokeStyle = "#7CFC00";
+  if (state.useBloom) { ctx.shadowBlur = 5; ctx.shadowColor = "#7CFC00"; }
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(6, 0); ctx.lineTo(-4, -4); ctx.lineTo(-2, 0); ctx.lineTo(-4, 4);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.strokeStyle = "#ff8800";
+  ctx.beginPath();
+  ctx.moveTo(-3, 0);
+  ctx.lineTo(-3 - (4 + Math.random() * 5), (Math.random() - 0.5) * 2);
+  ctx.stroke();
+  ctx.restore();
 
   for (let i = 0; i < TITLE_MENU_ITEMS.length; i++) {
     const item = TITLE_MENU_ITEMS[i];

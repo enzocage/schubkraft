@@ -29,8 +29,11 @@ export function loadLevel(levelData) {
   state.projectiles = [];
   state.particles = [];
   state.shockwaves = [];
+  state.debris = [];
   state.reactorTimer = 0;
   state.paused = false;
+  state.cam.x = state.ship.x;
+  state.cam.y = state.ship.y;
 
   state.entities = [];
   for (const ent of state.activeLevel.entities) {
@@ -498,13 +501,15 @@ export function spawnSparks(cx, cy, color, count) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * 1.8 + 0.4;
+    const life = Math.random() * 0.28 + 0.1;
     state.particles.push({
       x: cx,
       y: cy,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       color: color,
-      life: Math.random() * 0.28 + 0.1,
+      life: life,
+      maxLife: life,
       size: 0.8
     });
   }
@@ -514,14 +519,37 @@ export function spawnExplosionParticles(cx, cy, count) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * 2.8 + 0.6;
+    const life = Math.random() * 0.9 + 0.4;
     state.particles.push({
       x: cx,
       y: cy,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed + 0.1,
-      color: i % 2 === 0 ? "#ffaa00" : "#ffffff",
-      life: Math.random() * 0.9 + 0.4,
+      color: i % 3 === 0 ? "#ffffff" : (i % 3 === 1 ? "#ffaa00" : "#ff5500"),
+      life: life,
+      maxLife: life,
+      grav: true,
       size: Math.random() * 1.5 + 0.5
+    });
+  }
+}
+
+// Spinning wireframe shards — the ship/pod breaking apart
+export function spawnDebris(cx, cy, color, count, baseVx, baseVy) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 1.4 + 0.3;
+    state.debris.push({
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed + (baseVx || 0) * 0.5,
+      vy: Math.sin(angle) * speed + (baseVy || 0) * 0.5 - 0.4,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.5,
+      len: Math.random() * 4 + 2,
+      color: color,
+      life: Math.random() * 1.2 + 0.8,
+      maxLife: 2.0
     });
   }
 }
@@ -548,6 +576,7 @@ export function explodeShip() {
   state.flashTimer = 0.5;
   
   spawnExplosionParticles(state.ship.x, state.ship.y, 30);
+  spawnDebris(state.ship.x, state.ship.y, "#7CFC00", 8, state.ship.vx, state.ship.vy);
   spawnShockwave(state.ship.x, state.ship.y, "#ffaa00");
   state.lives--;
   
@@ -567,6 +596,7 @@ export function explodePod() {
   state.flashTimer = 0.4;
 
   spawnExplosionParticles(state.pod.x, state.pod.y, 25);
+  spawnDebris(state.pod.x, state.pod.y, "#ffffff", 6, state.pod.vx, state.pod.vy);
   spawnShockwave(state.pod.x, state.pod.y, "#ffffff");
   state.lives--;
 }
@@ -635,6 +665,7 @@ function updateProjectiles(dt) {
           else if (ent.health <= 0) {
             ent.active = false;
             spawnExplosionParticles(ent.x, ent.y, 10);
+            spawnDebris(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500", 6, 0, 0);
             spawnShockwave(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500");
             if (ent.type === "turret") {
               playSFX("turretDestroyed");
