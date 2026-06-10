@@ -51,13 +51,7 @@ export function bindInputEvents(canvas) {
           state.gameState = STATE_PLAYING;
         } 
         else if (state.titleMenuIndex === 1) {
-          const id = prompt("KAMPAGNE LEVEL WAHL (1 bis 8):", "1");
-          const idx = parseInt(id) - 1;
-          if (idx >= 0 && idx < CAMPAIGN.length) {
-            state.activeCampaignIdx = idx;
-            loadLevel(CAMPAIGN[state.activeCampaignIdx]);
-            state.gameState = STATE_PLAYING;
-          }
+          document.getElementById("campaign-select-panel").style.display = "block";
         }
         else if (state.titleMenuIndex === 2) {
           toggleEditor(true);

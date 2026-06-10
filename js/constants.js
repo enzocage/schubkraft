@@ -192,6 +192,237 @@ export const CAMPAIGN = [
       { type: "turret", x: 380, y: 580, angle: 0 },
       { type: "reactor", x: 320, y: 735 }
     ]
+  },
+  {
+    name: "VOLCANIC FISSURE",
+    theme: "c64",
+    gravity: 0.026,
+    fuel: 4800,
+    spawn: { x: 320, y: 100 },
+    exitY: 80,
+    polygons: [
+      [[0,0], [180,0], [140,240], [100,420], [160,600], [200,800], [0,800]],
+      [[640,0], [460,0], [500,240], [540,420], [480,600], [440,800], [640,800]],
+      [[280,750], [360,750], [340,770], [300,770]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 735 },
+      { type: "reactor", x: 320, y: 750 },
+      { type: "fuel", x: 150, y: 300 },
+      { type: "turret", x: 180, y: 200, angle: 0 },
+      { type: "turret", x: 460, y: 200, angle: Math.PI },
+      { type: "turret", x: 120, y: 480, angle: 0 }
+    ]
+  },
+  {
+    name: "CHARYBDIS GATE",
+    theme: "inverted",
+    gravity: 0.028,
+    fuel: 5200,
+    spawn: { x: 200, y: 100 },
+    exitY: 75,
+    polygons: [
+      [[0,0], [150,0], [120,200], [80,400], [140,600], [180,800], [0,800]],
+      [[640,0], [450,0], [480,200], [400,400], [500,600], [460,800], [640,800]],
+      [[250, 300], [390, 300], [350, 350], [290, 350]],
+      [[280, 750], [360, 750], [340, 770], [300, 770]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 735 },
+      { type: "door", x: 130, y: 480, w: 280, h: 10, trigger: "switch2" },
+      { type: "switch", x: 320, y: 330, target: "switch2" },
+      { type: "reactor", x: 480, y: 720 },
+      { type: "fuel", x: 320, y: 200 }
+    ]
+  },
+  {
+    name: "THE GAUNTLET",
+    theme: "bbc",
+    gravity: 0.030,
+    fuel: 5600,
+    spawn: { x: 320, y: 100 },
+    exitY: 80,
+    polygons: [
+      [[0,0], [160,0], [120,220], [160,440], [100,660], [140,800], [0,800]],
+      [[640,0], [480,0], [520,220], [480,440], [540,660], [500,800], [640,800]],
+      [[260, 760], [380, 760], [350, 780], [290, 780]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 745 },
+      { type: "turret", x: 140, y: 180, angle: 0 },
+      { type: "turret", x: 500, y: 180, angle: Math.PI },
+      { type: "turret", x: 180, y: 380, angle: 0 },
+      { type: "turret", x: 460, y: 380, angle: Math.PI },
+      { type: "turret", x: 120, y: 580, angle: 0 },
+      { type: "turret", x: 520, y: 580, angle: Math.PI },
+      { type: "reactor", x: 320, y: 765 },
+      { type: "fuel", x: 320, y: 450 }
+    ]
+  },
+  {
+    name: "ANTI-GRAVITY ZONE",
+    theme: "c64",
+    gravity: 0.024,
+    invertedGravity: true,
+    fuel: 6000,
+    spawn: { x: 320, y: 700 },
+    exitY: 750,
+    polygons: [
+      [[0,0], [200,0], [140,200], [180,400], [120,600], [220,800], [0,800]],
+      [[640,0], [440,0], [500,200], [460,400], [520,600], [420,800], [640,800]],
+      [[280, 150], [360, 150], [340, 130], [300, 130]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 165 },
+      { type: "reactor", x: 320, y: 90 },
+      { type: "turret", x: 160, y: 300, angle: 0 },
+      { type: "turret", x: 480, y: 500, angle: Math.PI },
+      { type: "fuel", x: 250, y: 550 }
+    ]
+  },
+  {
+    name: "THE PIT OF SHADOWS",
+    theme: "inverted",
+    gravity: 0.032,
+    fuel: 6400,
+    spawn: { x: 160, y: 80 },
+    exitY: 60,
+    polygons: [
+      [[0,0], [200,0], [160,300], [100,500], [80,800], [0,800]],
+      [[640,0], [420,0], [480,300], [440,500], [380,800], [640,800]],
+      [[180, 780], [300, 780], [280, 800], [200, 800]]
+    ],
+    entities: [
+      { type: "pod", x: 240, y: 765 },
+      { type: "reactor", x: 320, y: 760 },
+      { type: "turret", x: 450, y: 250, angle: Math.PI },
+      { type: "turret", x: 120, y: 450, angle: 0 },
+      { type: "fuel", x: 130, y: 280 },
+      { type: "fuel", x: 410, y: 480 }
+    ]
+  },
+  {
+    name: "SWITCHBACKS",
+    theme: "bbc",
+    gravity: 0.028,
+    fuel: 5000,
+    spawn: { x: 320, y: 80 },
+    exitY: 60,
+    polygons: [
+      [[0,0], [180,0], [100,160], [240,320], [100,480], [180,640], [220,800], [0,800]],
+      [[640,0], [460,0], [380,160], [540,320], [380,480], [460,640], [420,800], [640,800]],
+      [[280, 760], [360, 760], [340, 780], [300, 780]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 745 },
+      { type: "reactor", x: 320, y: 770 },
+      { type: "door", x: 240, y: 320, w: 300, h: 10, trigger: "switch_s1" },
+      { type: "switch", x: 150, y: 420, target: "switch_s1" },
+      { type: "turret", x: 340, y: 140, angle: -Math.PI / 2 },
+      { type: "turret", x: 300, y: 500, angle: Math.PI / 2 },
+      { type: "fuel", x: 300, y: 240 }
+    ]
+  },
+  {
+    name: "TURRET FORTRESS",
+    theme: "c64",
+    gravity: 0.030,
+    fuel: 6800,
+    spawn: { x: 200, y: 100 },
+    exitY: 70,
+    polygons: [
+      [[0,0], [140,0], [100,180], [60,360], [120,540], [80,720], [160,800], [0,800]],
+      [[640,0], [500,0], [540,180], [460,360], [520,540], [440,720], [480,800], [640,800]],
+      [[280, 770], [360, 770], [340, 790], [300, 790]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 755 },
+      { type: "reactor", x: 320, y: 780 },
+      { type: "turret", x: 120, y: 160, angle: 0 },
+      { type: "turret", x: 520, y: 160, angle: Math.PI },
+      { type: "turret", x: 80, y: 340, angle: 0 },
+      { type: "turret", x: 480, y: 340, angle: Math.PI },
+      { type: "turret", x: 140, y: 520, angle: 0 },
+      { type: "turret", x: 500, y: 520, angle: Math.PI },
+      { type: "turret", x: 100, y: 700, angle: 0 },
+      { type: "turret", x: 420, y: 700, angle: Math.PI },
+      { type: "fuel", x: 320, y: 450 },
+      { type: "fuel", x: 320, y: 600 }
+    ]
+  },
+  {
+    name: "RESONANCE CORE",
+    theme: "inverted",
+    gravity: 0.026,
+    fuel: 5800,
+    spawn: { x: 320, y: 80 },
+    exitY: 60,
+    polygons: [
+      [[0,0], [220,0], [140,200], [100,400], [160,600], [200,800], [0,800]],
+      [[640,0], [420,0], [500,200], [540,400], [480,600], [440,800], [640,800]],
+      [[260, 380], [380, 380], [360, 420], [280, 420]],
+      [[280, 750], [360, 750], [340, 770], [300, 770]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 735 },
+      { type: "reactor", x: 320, y: 755 },
+      { type: "door", x: 140, y: 195, w: 360, h: 10, trigger: "sw1" },
+      { type: "door", x: 160, y: 595, w: 320, h: 10, trigger: "sw2" },
+      { type: "switch", x: 320, y: 400, target: "sw1" },
+      { type: "switch", x: 320, y: 740, target: "sw2" },
+      { type: "fuel", x: 200, y: 300 },
+      { type: "fuel", x: 440, y: 500 }
+    ]
+  },
+  {
+    name: "HEAVY ELEMENT CAVERN",
+    theme: "bbc",
+    gravity: 0.035,
+    fuel: 8000,
+    spawn: { x: 180, y: 70 },
+    exitY: 50,
+    polygons: [
+      [[0,0], [120,0], [100,150], [40,300], [100,500], [60,700], [160,800], [0,800]],
+      [[640,0], [520,0], [560,150], [480,300], [540,500], [460,700], [480,800], [640,800]],
+      [[260, 760], [380, 760], [360, 780], [280, 780]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 745 },
+      { type: "reactor", x: 320, y: 770 },
+      { type: "fuel", x: 120, y: 240 },
+      { type: "fuel", x: 500, y: 440 },
+      { type: "fuel", x: 120, y: 640 },
+      { type: "turret", x: 500, y: 220, angle: Math.PI },
+      { type: "turret", x: 80, y: 480, angle: 0 },
+      { type: "turret", x: 500, y: 680, angle: Math.PI }
+    ]
+  },
+  {
+    name: "FINAL REDOUBT",
+    theme: "c64",
+    gravity: 0.032,
+    fuel: 8500,
+    spawn: { x: 320, y: 90 },
+    exitY: 70,
+    polygons: [
+      [[0,0], [240,0], [160,180], [120,360], [180,540], [100,720], [200,800], [0,800]],
+      [[640,0], [400,0], [480,180], [520,360], [460,540], [540,720], [440,800], [640,800]],
+      [[280, 770], [360, 770], [340, 790], [300, 790]]
+    ],
+    entities: [
+      { type: "pod", x: 320, y: 755 },
+      { type: "reactor", x: 320, y: 780 },
+      { type: "door", x: 160, y: 175, w: 320, h: 10, trigger: "final_sw" },
+      { type: "switch", x: 320, y: 730, target: "final_sw" },
+      { type: "turret", x: 180, y: 280, angle: 0 },
+      { type: "turret", x: 460, y: 280, angle: Math.PI },
+      { type: "turret", x: 140, y: 480, angle: 0 },
+      { type: "turret", x: 500, y: 480, angle: Math.PI },
+      { type: "turret", x: 120, y: 660, angle: 0 },
+      { type: "turret", x: 520, y: 660, angle: Math.PI },
+      { type: "fuel", x: 150, y: 420 },
+      { type: "fuel", x: 490, y: 600 }
+    ]
   }
 ];
 

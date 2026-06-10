@@ -73,6 +73,35 @@ if (localHS) {
 // Bind canvas inputs and window key listeners
 bindInputEvents(canvas);
 
+// Dynamic Campaign Select population
+function buildCampaignList() {
+  const container = document.getElementById("campaign-list-container");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  CAMPAIGN.forEach((level, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "editor-btn";
+    btn.style.textAlign = "left";
+    btn.style.padding = "8px 12px";
+    btn.innerText = `${idx + 1}. ${level.name} (${level.theme.toUpperCase()})`;
+    btn.addEventListener("click", () => {
+      state.lives = 3;
+      state.score = 0;
+      state.activeCampaignIdx = idx;
+      loadLevel(CAMPAIGN[idx]);
+      state.gameState = STATE_PLAYING;
+      document.getElementById("campaign-select-panel").style.display = "none";
+    });
+    container.appendChild(btn);
+  });
+}
+buildCampaignList();
+
+document.getElementById("btn-close-campaign-select").addEventListener("click", () => {
+  document.getElementById("campaign-select-panel").style.display = "none";
+});
+
 // ==========================================
 // 2. VIEWPORT / RESIZING COORDINATES
 // ==========================================
