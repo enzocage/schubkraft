@@ -424,7 +424,7 @@ export function renderGame(canvas, ctx) {
   ctx.save();
   const crtAlpha = 0.03 + Math.random() * 0.02;
   for (let i = 0; i < 60; i++) {
-    ctx.fillStyle = gba(255,255,255,);
+    ctx.fillStyle = "rgba(255,255,255," + (crtAlpha * Math.random()).toFixed(3) + ")";
     ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 3, 1);
   }
   ctx.restore();
@@ -638,7 +638,7 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
   ctx.save();
   const crtAlpha = 0.03 + Math.random() * 0.02;
   for (let i = 0; i < 60; i++) {
-    ctx.fillStyle = gba(255,255,255,);
+    ctx.fillStyle = "rgba(255,255,255," + (crtAlpha * Math.random()).toFixed(3) + ")";
     ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 3, 1);
   }
   ctx.restore();
