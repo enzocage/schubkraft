@@ -3,6 +3,7 @@ import { drawVectorChar, drawVectorText } from './vectorFont.js';
 
 // Organic animation — Baba Is You style variant cycling every 200ms
 let animTick = 0;
+let shootingStar = null;
 export function tickAnimation() { animTick++; }
 function variant() { return Math.floor(animTick / 12) % 5; }
 // Subtle wobble: ±0.3 of the given amount instead of ±2x
@@ -45,8 +46,13 @@ export function renderGame(canvas, ctx) {
 
   ctx.save();
   ctx.scale(scaleX, scaleY);
-  
-  ctx.fillStyle = "#000000";
+
+  // Deep-space backdrop: subtle radial night gradient instead of flat black
+  const bgGrad = ctx.createRadialGradient(160, 90, 10, 160, 110, 260);
+  bgGrad.addColorStop(0, "#0b0b1a");
+  bgGrad.addColorStop(0.5, "#06060f");
+  bgGrad.addColorStop(1, "#010103");
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, 320, 200);
 
   // Camera Offset
@@ -83,6 +89,58 @@ export function renderGame(canvas, ctx) {
 
   const viewL = camX - 160;
   const viewT = camY - 100;
+
+  // 0b. Distant nebula clouds drifting on very slow parallax
+  const nebulae = [
+    { x: 90, y: 60, r: 70, col: "rgba(90, 40, 140," , a: 0.05, p: 0.012 },
+    { x: 250, y: 140, r: 85, col: "rgba(0, 90, 110,", a: 0.045, p: 0.018 },
+    { x: 180, y: 40, r: 55, col: "rgba(140, 40, 70,", a: 0.04, p: 0.009 }
+  ];
+  for (const nb of nebulae) {
+    const nx = ((nb.x - camX * nb.p) % 380 + 380) % 380 - 30;
+    const ny = ((nb.y - camY * nb.p) % 240 + 240) % 240 - 20;
+    const pulse = 1 + 0.18 * Math.sin(Date.now() * 0.0004 + nb.x);
+    const ng = ctx.createRadialGradient(nx, ny, 4, nx, ny, nb.r * pulse);
+    ng.addColorStop(0, nb.col + (nb.a * 1.6) + ")");
+    ng.addColorStop(0.6, nb.col + nb.a + ")");
+    ng.addColorStop(1, nb.col + "0)");
+    ctx.fillStyle = ng;
+    ctx.beginPath();
+    ctx.arc(nx, ny, nb.r * pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 0c. Occasional shooting star streaking across the sky
+  if (!shootingStar && Math.random() < 0.004) {
+    const fromLeft = Math.random() < 0.5;
+    shootingStar = {
+      x: fromLeft ? -10 : 330,
+      y: Math.random() * 90 + 10,
+      vx: (fromLeft ? 1 : -1) * (2.2 + Math.random() * 2),
+      vy: 0.5 + Math.random() * 0.9,
+      life: 1
+    };
+  }
+  if (shootingStar) {
+    const ss = shootingStar;
+    ss.x += ss.vx;
+    ss.y += ss.vy;
+    ss.life -= 0.012;
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, ss.life * 0.8)})`;
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(ss.x, ss.y);
+    ctx.lineTo(ss.x - ss.vx * 6, ss.y - ss.vy * 6);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(150,200,255,${Math.max(0, ss.life * 0.3)})`;
+    ctx.beginPath();
+    ctx.moveTo(ss.x - ss.vx * 6, ss.y - ss.vy * 6);
+    ctx.lineTo(ss.x - ss.vx * 14, ss.y - ss.vy * 14);
+    ctx.stroke();
+    ctx.restore();
+    if (ss.life <= 0 || ss.x < -30 || ss.x > 350 || ss.y > 230) shootingStar = null;
+  }
 
   // 1. Pseudo-3D parallax starfield: depth-scaled glowing circles.
   // Far stars: tiny dim dots. Near stars: bright discs with soft halos.
@@ -165,13 +223,33 @@ export function renderGame(canvas, ctx) {
     ctx.restore();
   }
 
-  // Draw exit line
-  ctx.strokeStyle = "rgba(255, 255, 0, 0.25)";
+  // Exit line: animated dashed beacon + chevrons pointing the escape direction
+  const exitYLine = state.activeLevel.exitY;
+  const exitInverted = !!state.activeLevel.invertedGravity;
+  ctx.save();
   ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+  const exitPulse = 0.18 + 0.14 * Math.sin(Date.now() * 0.003);
+  ctx.strokeStyle = `rgba(255, 255, 0, ${exitPulse})`;
+  ctx.setLineDash([6, 5]);
+  ctx.lineDashOffset = -(Date.now() * 0.01) % 11;
   ctx.beginPath();
-  ctx.moveTo(0, state.activeLevel.exitY);
-  ctx.lineTo(1200, state.activeLevel.exitY);
+  ctx.moveTo(0, exitYLine);
+  ctx.lineTo(1200, exitYLine);
   ctx.stroke();
+  ctx.setLineDash([]);
+  // Chevrons drift toward the exit (up normally, down when gravity inverted)
+  const chevDir = exitInverted ? 1 : -1;
+  const chevPhase = (Date.now() * 0.012) % 16;
+  ctx.strokeStyle = "rgba(255, 255, 80, 0.30)";
+  for (let cxp = 40; cxp < 640; cxp += 80) {
+    const cy2 = exitYLine + chevDir * (6 + chevPhase);
+    ctx.beginPath();
+    ctx.moveTo(cxp - 4, cy2 + chevDir * 4);
+    ctx.lineTo(cxp, cy2);
+    ctx.lineTo(cxp + 4, cy2 + chevDir * 4);
+    ctx.stroke();
+  }
+  ctx.restore();
 
   const themePreset = THEMES[state.activeLevel.theme] || THEMES.c64;
   const objColor = themePreset.objects;
@@ -196,8 +274,21 @@ export function renderGame(canvas, ctx) {
     ctx.strokeStyle = objColor;
 
     if (ent.type === "turret") {
+      // Armored base plate + mount struts + rotating dome
+      ctx.beginPath();
+      ctx.moveTo(ent.x - 10, ent.y + 1);
+      ctx.lineTo(ent.x + 10, ent.y + 1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ent.x - 7, ent.y + 1); ctx.lineTo(ent.x - 5, ent.y - 2);
+      ctx.moveTo(ent.x + 7, ent.y + 1); ctx.lineTo(ent.x + 5, ent.y - 2);
+      ctx.stroke();
       ctx.beginPath();
       ctx.arc(ent.x + vJitter(0.8), ent.y + vJitter(0.8), 7 + vJitter(1), Math.PI, 0);
+      ctx.stroke();
+      // Dome seam detail
+      ctx.beginPath();
+      ctx.arc(ent.x, ent.y, 4.5, Math.PI * 1.15, Math.PI * 1.85);
       ctx.stroke();
 
       const angle = ent.angle !== undefined ? ent.angle : (ent.dir === -1 ? Math.PI : 0);
@@ -247,12 +338,46 @@ export function renderGame(canvas, ctx) {
       ctx.restore();
     }
     else if (ent.type === "fuel") {
-      ctx.strokeRect(ent.x - 9 + vJitter(1), ent.y - 8 + vJitter(1), 18 + vJitter(2), 16 + vJitter(2));
+      // Fuel canister: body + cap + level gauge that drains as it's siphoned
+      const fillFrac = Math.max(0, Math.min(1, ent.health !== undefined ? ent.health : 1));
+      const fx = ent.x + vJitter(0.4);
+      const fy = ent.y + vJitter(0.4);
+
+      // Soft pulsing glow behind canister
+      ctx.save();
+      ctx.shadowBlur = 0;
+      const fuelPulse = 0.10 + 0.06 * Math.sin(Date.now() * 0.004 + ent.x);
+      const fg = ctx.createRadialGradient(fx, fy, 2, fx, fy, 16);
+      fg.addColorStop(0, `rgba(124, 252, 0, ${fuelPulse})`);
+      fg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Body + filler cap
+      ctx.strokeRect(fx - 9, fy - 8, 18, 16);
+      ctx.strokeRect(fx - 3, fy - 11, 6, 3);
+      // Liquid level (filled from bottom, drains while tractored)
+      ctx.save();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(124, 252, 0, 0.25)";
+      const lh = 13 * fillFrac;
+      ctx.fillRect(fx - 7.5, fy + 6.5 - lh, 15, lh);
+      // Liquid surface shimmer line
+      ctx.strokeStyle = "rgba(190, 255, 120, 0.8)";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(fx - 7.5, fy + 6.5 - lh + Math.sin(Date.now() * 0.01) * 0.5);
+      ctx.lineTo(fx + 7.5, fy + 6.5 - lh - Math.sin(Date.now() * 0.01) * 0.5);
+      ctx.stroke();
+      ctx.restore();
       ctx.save();
       ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
-      drawVectorText(ctx, "FUEL", ent.x - 8, ent.y - 3, 0.22, objColor);
+      drawVectorText(ctx, "FUEL", fx - 8, fy - 3, 0.22, objColor);
       ctx.restore();
-    } 
+    }
     else if (ent.type === "reactor") {
       const overload = state.reactorTimer > 0;
       const t = Date.now() * (overload ? 0.03 : 0.008);
@@ -396,6 +521,18 @@ export function renderGame(canvas, ctx) {
     ctx.lineTo(-4, 4);
     ctx.closePath();
     ctx.stroke();
+
+    // Cockpit canopy + glowing engine port detail
+    ctx.beginPath();
+    ctx.moveTo(3.5, 0);
+    ctx.lineTo(0.5, -1.6);
+    ctx.lineTo(0.5, 1.6);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.save();
+    ctx.fillStyle = state.keys.thrust && state.ship.fuel > 0 ? "#ffcc66" : "rgba(124,252,0,0.5)";
+    ctx.fillRect(-3.4, -0.9, 1.2, 1.8);
+    ctx.restore();
 
     // Thrust Flame & Glow
     if (state.keys.thrust && state.ship.fuel > 0) {
@@ -666,38 +803,98 @@ export function renderGame(canvas, ctx) {
     ctx.restore();
   }
 
-  // Screen transition: trash-static / dust splash burst on EVERY state change
+  // Screen transition: one of 5 randomized trash bursts on EVERY state change
   if (state.gameState !== state.lastGameState) {
     state.lastGameState = state.gameState;
-    state.transitionTimer = 0.45;
+    state.transitionTimer = 0.55;
+    state.transitionVariant = Math.floor(Math.random() * 5);
   }
   if (state.transitionTimer > 0) {
-    const ta = state.transitionTimer / 0.45;
+    const ta = state.transitionTimer / 0.55;
     ctx.save();
 
-    // Heavy static trash
-    for (let i = 0; i < 220 * ta; i++) {
-      ctx.fillStyle = `rgba(255,255,255,${(Math.random() * 0.5 * ta).toFixed(3)})`;
-      ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 7, 1 + Math.random() * 1.5);
+    if (state.transitionVariant === 0) {
+      // ===== RGB STATIC STORM: violent tri-color noise blizzard =====
+      const chans = ["255,40,40", "40,255,60", "60,80,255", "255,255,255"];
+      for (let i = 0; i < 320 * ta; i++) {
+        ctx.fillStyle = `rgba(${chans[i % 4]},${(Math.random() * 0.65 * ta).toFixed(3)})`;
+        ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 9, 1 + Math.random() * 2.5);
+      }
+      ctx.fillStyle = `rgba(255,255,255,${0.10 * ta})`;
+      ctx.fillRect(0, Math.random() * 200, 320, 3);
     }
-    // Horizontal tear lines (VHS-style)
-    for (let i = 0; i < 7 * ta; i++) {
-      const ty2 = Math.random() * 200;
-      ctx.fillStyle = `rgba(${Math.random() < 0.5 ? '124,252,0' : '255,255,255'},${0.12 + Math.random() * 0.25 * ta})`;
-      ctx.fillRect(0, ty2, 320, 1 + Math.random() * 2);
+    else if (state.transitionVariant === 1) {
+      // ===== VHS CHROMA TEAR: shifted magenta/cyan bands + tracking lines =====
+      for (let i = 0; i < 9 * ta; i++) {
+        const ty2 = Math.random() * 200;
+        const th = 3 + Math.random() * 10;
+        const shift = (Math.random() - 0.5) * 26 * ta;
+        ctx.fillStyle = `rgba(255,0,180,${0.10 + Math.random() * 0.22 * ta})`;
+        ctx.fillRect(shift, ty2, 320, th);
+        ctx.fillStyle = `rgba(0,230,255,${0.10 + Math.random() * 0.22 * ta})`;
+        ctx.fillRect(-shift, ty2 + th * 0.4, 320, th * 0.6);
+      }
+      for (let i = 0; i < 90 * ta; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${(Math.random() * 0.5 * ta).toFixed(3)})`;
+        ctx.fillRect(Math.random() * 320, Math.random() * 200, 2 + Math.random() * 12, 1);
+      }
     }
-    // One bright rolling band
-    const bandY = ((1 - ta) * 260) - 30;
-    ctx.fillStyle = `rgba(255,255,255,${0.08 * ta})`;
-    ctx.fillRect(0, bandY, 320, 24);
-    // Dust splash: drifting motes
-    for (let i = 0; i < 26 * ta; i++) {
-      const dr = Math.random() * 1.8 + 0.3;
-      ctx.fillStyle = `rgba(200,200,210,${(Math.random() * 0.4 * ta).toFixed(3)})`;
-      ctx.beginPath();
-      ctx.arc(Math.random() * 320, Math.random() * 200, dr, 0, Math.PI * 2);
-      ctx.fill();
+    else if (state.transitionVariant === 2) {
+      // ===== C64 RAINBOW BARS: classic loader stripes sweeping down =====
+      const barCols = ["#ff2222", "#ff8800", "#ffee00", "#22dd44", "#2288ff", "#aa44ff", "#ff44aa"];
+      const sweep = (1 - ta) * 280 - 60;
+      for (let i = 0; i < 14; i++) {
+        const by = sweep + i * 9;
+        ctx.globalAlpha = 0.5 * ta;
+        ctx.fillStyle = barCols[i % barCols.length];
+        ctx.fillRect(0, by, 320, 5);
+      }
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < 60 * ta; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${(Math.random() * 0.4 * ta).toFixed(3)})`;
+        ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 4, 1);
+      }
     }
+    else if (state.transitionVariant === 3) {
+      // ===== PIXEL DUST IMPLOSION: colored motes spiraling toward center =====
+      const prog = 1 - ta;
+      const dustCols = ["255,200,60", "120,255,120", "120,200,255", "255,120,200"];
+      for (let i = 0; i < 60 * ta; i++) {
+        const a = (i / 60) * Math.PI * 2 + prog * 5;
+        const dist = (1 - prog) * (60 + (i % 5) * 26);
+        const px2 = 160 + Math.cos(a) * dist * 1.5;
+        const py2 = 100 + Math.sin(a) * dist;
+        ctx.fillStyle = `rgba(${dustCols[i % 4]},${(0.25 + Math.random() * 0.5) * ta})`;
+        ctx.beginPath();
+        ctx.arc(px2, py2, 0.6 + Math.random() * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Center flash as everything collapses
+      const flashGrad = ctx.createRadialGradient(160, 100, 0, 160, 100, 50 * ta + 6);
+      flashGrad.addColorStop(0, `rgba(255,255,255,${0.30 * ta})`);
+      flashGrad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = flashGrad;
+      ctx.fillRect(0, 0, 320, 200);
+    }
+    else {
+      // ===== GLITCH BLOCKS: phosphor wash + displaced color rectangles =====
+      ctx.fillStyle = `rgba(40, 255, 80, ${0.07 * ta})`;
+      ctx.fillRect(0, 0, 320, 200);
+      const glitchCols = ["255,60,60", "60,255,120", "255,220,40", "200,80,255", "60,220,255"];
+      for (let i = 0; i < 16 * ta; i++) {
+        ctx.fillStyle = `rgba(${glitchCols[i % 5]},${0.12 + Math.random() * 0.30 * ta})`;
+        ctx.fillRect(Math.random() * 300, Math.random() * 190, 8 + Math.random() * 60, 2 + Math.random() * 9);
+      }
+      // Scanline roll bar
+      const rollY = ((1 - ta) * 300) - 40;
+      ctx.fillStyle = `rgba(180,255,180,${0.14 * ta})`;
+      ctx.fillRect(0, rollY, 320, 30);
+      for (let i = 0; i < 100 * ta; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${(Math.random() * 0.45 * ta).toFixed(3)})`;
+        ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 5, 1);
+      }
+    }
+
     ctx.restore();
   }
 
@@ -739,7 +936,21 @@ export function renderHUD(ctx, dpr, scaleX, scaleY) {
     ctx.fillStyle = fuelColor;
     ctx.fillRect(11, 23, 58 * fuelFrac, 2);
   }
-  drawVectorText(ctx, `LIVES: ${state.lives}`, 125, 8, 0.28, hudColor);
+  // Lives shown as little ship glyphs
+  drawVectorText(ctx, "LIVES:", 125, 8, 0.28, hudColor);
+  ctx.save();
+  ctx.strokeStyle = hudColor;
+  for (let li = 0; li < Math.min(5, state.lives); li++) {
+    const lx = 172 + li * 11;
+    ctx.beginPath();
+    ctx.moveTo(lx, 7);
+    ctx.lineTo(lx - 3, 13);
+    ctx.lineTo(lx, 11.5);
+    ctx.lineTo(lx + 3, 13);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.restore();
   drawVectorText(ctx, `SCORE: ${state.score.toString().padStart(6, '0')}`, 205, 8, 0.28, hudColor);
 
   // Mini Radar

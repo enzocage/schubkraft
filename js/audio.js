@@ -508,7 +508,7 @@ function beat() {
   ];
 }
 
-const HUBBARD_SONG = {
+export const HUBBARD_SONG = {
   title: "THRUST — HUBBARD STYLE",
   speed: 5,
   instruments: {
@@ -666,6 +666,8 @@ async function doInitAudio() {
 // ============================================================================
 // Public API
 // ============================================================================
+export function getSid() { return sid; } // debug/testing handle
+
 export function resumeAudioContext() {
   if (sid && sid.ctx && sid.ctx.state === 'suspended') {
     sid.ctx.resume();

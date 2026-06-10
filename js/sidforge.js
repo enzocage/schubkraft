@@ -212,7 +212,9 @@ class SidCoreProcessor extends AudioWorkletProcessor {
   parseNote(str) {
     if (!str || str === "---" || str === "...") return null;
     // Accepts "C-4", "C#4", "C#-4", "Db4", "Db-4"
-    const m = /^([A-Ga-g])([#b]?)-?(\d)$/.exec(str);
+    // NOTE: this code lives inside a template literal, so the regex digit
+    // class must be written as \\d to survive template escape processing
+    const m = /^([A-Ga-g])([#b]?)-?(\\d)$/.exec(str);
     if (!m) return null;
     const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     let noteIdx = NOTES.indexOf(m[1].toUpperCase() + (m[2] === "#" ? "#" : ""));

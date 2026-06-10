@@ -323,6 +323,7 @@ export const state = {
   screenShake: 0,
   flashTimer: 0,
   transitionTimer: 0,
+  transitionVariant: 0,
   textPromptTimer: 0,
   textPromptMessage: "",
   stars: [],

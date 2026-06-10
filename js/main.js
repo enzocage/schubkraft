@@ -140,6 +140,17 @@ function updateVisualEffects(dt) {
   // Parallax moon rotation drift
   state.rotateMoon += dt * 0.04;
 
+  // 3D starfield fly-through: stars slowly drift toward the camera
+  // (z grows -> bigger, faster, brighter), then recycle to the far plane
+  for (const star of state.stars) {
+    star.z += dt * 0.018;
+    if (star.z > 1) {
+      star.z = 0.02 + Math.random() * 0.08;
+      star.x = Math.random() * 320;
+      star.y = Math.random() * 200;
+    }
+  }
+
   // Update particle physics (with gravity + slight drag on explosion debris)
   for (let i = state.particles.length - 1; i >= 0; i--) {
     const p = state.particles[i];
