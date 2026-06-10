@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>THRUST — Retro C64 Clone in HTML5</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #7CFC00;
+      --bg: #030305;
+      --panel-bg: rgba(10, 10, 20, 0.9);
+      --border-color: rgba(124, 252, 0, 0.4);
+      --font-retro: 'Press Start 2P', monospace;
+      --font-ui: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: #fff;
+      font-family: var(--font-ui);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      /* Diagonal scanner backdrop lines */
+      background-image: 
+        radial-gradient(circle at center, #111124 0%, #030305 100%),
+        linear-gradient(45deg, rgba(124, 252, 0, 0.02) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(124, 252, 0, 0.02) 25%, transparent 25%);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+    }
+
+    /* Elegant Retro Cabinet Wrapper Frame */
+    #cabinet-bezel {
+      position: relative;
+      background: linear-gradient(135deg, #1e1e30 0%, #0f0f18 100%);
+      border: 18px solid #2d2d44;
+      border-image: linear-gradient(#4b4b66, #1f1f33, #0f0f1c) 20;
+      box-shadow: 
+        0 0 0 4px #0b0b14,
+        0 25px 60px rgba(0, 0, 0, 0.9),
+        inset 0 0 40px rgba(0,0,0,0.8);
+      border-radius: 20px;
+      width: 95%;
+      max-width: 920px;
+      aspect-ratio: 4/3;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* Screen overlays */
+    #crt-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      /* Interlaced scanline texture */
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.22) 50%
+      );
+      background-size: 100% 4px;
+      opacity: 0.9;
+      transition: opacity 0.3s;
+    }
+
+    #crt-overlay.disabled {
+      opacity: 0;
+    }
+
+    #crt-vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 11;
+      box-shadow: 
+        inset 0 0 100px rgba(0, 0, 0, 0.95),
+        inset 0 0 30px rgba(124, 252, 0, 0.05);
+      border-radius: 8px;
+    }
+
+    /* High-Fidelity Glass UI Toolbar for Level Editor */
+    #editor-toolbar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 20px;
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+      gap: 12px;
+      z-index: 20;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    }
+
+    .editor-btn {
+      background: rgba(124, 252, 0, 0.08);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: var(--font-ui);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .editor-btn:hover, .editor-btn.active {
+      background: var(--primary);
+      color: #000;
+      box-shadow: 0 0 14px rgba(124, 252, 0, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* Dialog Panel styling */
+    .dialog-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 460px;
+      z-index: 30;
+      display: none;
+      box-shadow: 
+        0 20px 45px rgba(0,0,0,0.7),
+        inset 0 0 20px rgba(124,252,0,0.1);
+    }
+
+    .dialog-title {
+      font-family: var(--font-retro);
+      font-size: 13px;
+      color: var(--primary);
+      margin-bottom: 18px;
+      text-shadow: 0 0 8px rgba(124, 252, 0, 0.5);
+      letter-spacing: 1px;
+    }
+
+    .dialog-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    textarea.json-area {
+      width: 100%;
+      height: 180px;
+      background: #020204;
+      border: 1px solid var(--border-color);
+      color: var(--primary);
+      font-family: monospace;
+      font-size: 11px;
+      padding: 12px;
+      border-radius: 6px;
+      resize: none;
+      outline: none;
+    }
+
+    /* Invisible Pointer Input Overlays */
+    #touch-tutorial {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 15;
+      display: none;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .tutorial-zone {
+      position: absolute;
+      border: 2px dashed rgba(124, 252, 0, 0.4);
+      background: rgba(124, 252, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: rgba(255,255,255,0.85);
+      text-align: center;
+      padding: 20px;
+      box-shadow: inset 0 0 20px rgba(124, 252, 0, 0.05);
+    }
+
+    .tutorial-zone h3 {
+      font-family: var(--font-retro);
+      font-size: 9px;
+      color: var(--primary);
+      margin-bottom: 8px;
+      text-shadow: 0 0 5px rgba(124,252,0,0.5);
+    }
+
+    .tutorial-zone p {
+      font-size: 13px;
+    }
+
+    /* Cabinet Bezel branding elements */
+    #bezel-header {
+      width: 100%;
+      padding: 6px 15px;
+      background: #151522;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #0f0f18;
+      font-family: var(--font-retro);
+      font-size: 10px;
+      color: #777;
+    }
+
+    #bezel-header span.glow {
+      color: var(--primary);
+      text-shadow: 0 0 5px var(--primary);
+    }
+
+    /* Options HUD under Bezel */
+    #external-controls {
+      display: flex;
+      gap: 25px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #999;
+      font-weight: 500;
+    }
+
+    .ctrl-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .ctrl-item input {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Desktop and Mobile layout settings */
+    @media (max-width: 960px) {
+      #cabinet-bezel {
+        border-radius: 0;
+        border: none;
+        width: 100vw;
+        height: 100vw;
+        max-height: calc(100vh - 120px);
+        aspect-ratio: 4/3;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Bezel Header Branding -->
+  <div id="cabinet-bezel">
+    <div id="bezel-header">
+      <span>★ RETRO ARCADE ★</span>
+      <span class="glow">THRUST C64 SYSTEM</span>
+      <span>INSERT COIN</span>
+    </div>
+    
+    <div id="canvas-container">
+      <canvas id="gameCanvas"></canvas>
+      
+      <!-- Vector Scanlines overlays -->
+      <div id="crt-overlay"></div>
+      <div id="crt-vignette"></div>
+
+      <!-- Touch Overlay Tutorial -->
+      <div id="touch-tutorial">
+        <div class="tutorial-zone" style="top:0; left:0; width:50%; height:100%;">
+          <h3>LENKUNG (LINKS)</h3>
+          <p>Links / rechts wischen zum Drehen</p>
+        </div>
+        <div class="tutorial-zone" style="top:50%; left:50%; width:50%; height:50%;">
+          <h3>SCHUB (RECHTS)</h3>
+          <p>Halten für Triebwerk</p>
+        </div>
+        <div class="tutorial-zone" style="top:0; left:50%; width:50%; height:50%;">
+          <h3>SCHILD / SCHIESSEN</h3>
+          <p>Oben tippen = Schießen<br>Zweiter Finger = Schild</p>
+        </div>
+      </div>
+
+      <!-- Level JSON IO Modal -->
+      <div id="json-modal" class="dialog-panel">
+        <div class="dialog-title" id="modal-title">Level JSON</div>
+        <div class="dialog-body">
+          <textarea id="json-textarea" class="json-area" readonly></textarea>
+          <div style="display:flex; gap:12px;">
+            <button id="btn-copy-json" class="editor-btn" style="flex:1;">Kopieren</button>
+            <button id="btn-import-json" class="editor-btn" style="flex:1; display:none;">Importieren</button>
+            <button id="btn-close-modal" class="editor-btn">Schließen</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor Selected Entity Properties Modal -->
+      <div id="entity-properties-panel" class="dialog-panel" style="top: 35%; max-width: 380px; box-shadow: 0 0 20px rgba(0,255,255,0.25);">
+        <div class="dialog-title">Objekt-Eigenschaften</div>
+        <div class="dialog-body" style="font-size: 13px;">
+          <div id="prop-type-title" style="font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 8px;">Typ: Turret</div>
+          
+          <label id="prop-angle-container" style="display:flex; flex-direction:column; gap:4px;">
+            <span>Ausrichtung (Winkel in Grad):</span>
+            <input type="range" id="prop-angle-range" min="0" max="360" step="15" value="0" style="accent-color: var(--primary);">
+            <span id="prop-angle-val" style="text-align:right; font-weight:bold;">0°</span>
+          </label>
+
+          <label id="prop-trigger-container" style="display:flex; flex-direction:column; gap:4px;">
+            <span>Auslöser ID (z.B. switch1):</span>
+            <input type="text" id="prop-trigger-input" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+          </label>
+
+          <label id="prop-door-w-container" style="display:flex; flex-direction:column; gap:4px;">
+            <span>Breite der Tür:</span>
+            <input type="number" id="prop-door-w" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+          </label>
+          
+          <label id="prop-door-h-container" style="display:flex; flex-direction:column; gap:4px;">
+            <span>Höhe der Tür:</span>
+            <input type="number" id="prop-door-h" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+          </label>
+
+          <label id="prop-target-container" style="display:flex; flex-direction:column; gap:4px;">
+            <span>Ziel ID (z.B. switch1):</span>
+            <input type="text" id="prop-target-input" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+          </label>
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+            <button id="btn-save-properties" class="editor-btn" style="flex:1; border-color: #7CFC00;">Speichern</button>
+            <button id="btn-delete-prop-entity" class="editor-btn" style="border-color:#ff3333; color:#ff3333;">Löschen</button>
+            <button id="btn-close-properties" class="editor-btn">Schließen</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor Settings Modal -->
+      <div id="theme-settings-panel" class="dialog-panel" style="top: 40%; max-width: 380px;">
+        <div class="dialog-title">Theme & Schwerkraft</div>
+        <div class="dialog-body" style="font-size: 13px;">
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Level-Name:</span>
+            <input type="text" id="level-name-input" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;" value="Zyklon-Mine 1">
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Planet-Theme:</span>
+            <select id="theme-select" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+              <option value="c64">Planet A (C64 Reddish Hatched)</option>
+              <option value="inverted">Planet B (Green Inverted)</option>
+              <option value="bbc">Planet C (BBC Outline)</option>
+            </select>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Raster-Ausrichtung (Grid Snap):</span>
+            <select id="grid-snap-select" style="background:#020204; border:1px solid var(--border-color); color:#fff; padding:8px; border-radius:6px; outline:none;">
+              <option value="0">Kein Raster (Frei)</option>
+              <option value="4">4px Raster</option>
+              <option value="8" selected>8px Raster</option>
+              <option value="16">16px Raster</option>
+              <option value="32">32px Raster</option>
+            </select>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Schwerkraft:</span>
+            <input type="range" id="gravity-range" min="0.005" max="0.050" step="0.002" value="0.022" style="accent-color: var(--primary);">
+            <span id="gravity-val" style="text-align:right; font-weight:bold;">0.022</span>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Start-Treibstoff (Fuel):</span>
+            <input type="range" id="fuel-range" min="200" max="5000" step="100" value="2000" style="accent-color: var(--primary);">
+            <span id="fuel-val" style="text-align:right; font-weight:bold;">2000</span>
+          </label>
+          <button id="btn-save-settings" class="editor-btn" style="margin-top: 10px;">Anwenden</button>
+        </div>
+      </div>
+
+      <!-- Editor Panel Toolbar -->
+      <div id="editor-toolbar">
+        <button id="btn-mode-poly" class="editor-btn active">Poly-Zeichnen</button>
+        
+        <select id="entity-select" class="editor-btn" style="background: rgba(124, 252, 0, 0.08); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); outline: none;">
+          <option value="fuel" style="background:#000;">Objekt: Fuel</option>
+          <option value="turret" style="background:#000;">Objekt: Turret</option>
+          <option value="reactor" style="background:#000;">Objekt: Reactor</option>
+          <option value="spawn" style="background:#000;">Objekt: Spawn</option>
+          <option value="pod" style="background:#000;">Objekt: Pod</option>
+          <option value="switch" style="background:#000;">Objekt: Switch</option>
+          <option value="door" style="background:#000;">Objekt: Door</option>
+        </select>
+        
+        <button id="btn-mode-delete" class="editor-btn" style="border-color: #ff33ff; color: #ff33ff;">Löschen (Del)</button>
+        
+        <select id="shape-templates-select" class="editor-btn" style="background:#020204; border:1px solid #ffcc00; color:#ffcc00; font-family:var(--font-ui); outline:none;">
+          <option value="" style="background:#000;">Vorlage einfügen...</option>
+          <option value="pillar" style="background:#000;">Pfeiler</option>
+          <option value="basin" style="background:#000;">Reaktor-Becken</option>
+          <option value="pad" style="background:#000;">Lande-Pedestal</option>
+          <option value="bridge" style="background:#000;">Plattform/Brücke</option>
+        </select>
+        
+        <button id="btn-zoom-in" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa;">Zoom +</button>
+        <button id="btn-zoom-out" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa;">Zoom -</button>
+
+        <button id="btn-editor-undo" class="editor-btn" style="border-color: #00ffff; color: #00ffff;">Undo (Z)</button>
+        <button id="btn-open-settings" class="editor-btn">Einstellungen</button>
+        <button id="btn-test-level" class="editor-btn" style="border-color: #ff9900; color: #ff9900;">Testen (T)</button>
+        <button id="btn-export" class="editor-btn">Export</button>
+        <button id="btn-import" class="editor-btn">Import</button>
+        <button id="btn-clear-level" class="editor-btn" style="border-color: #ff3333; color: #ff3333;">Leeren</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Settings HUD Panel -->
+  <div id="external-controls">
+    <div class="ctrl-item">
+      <input type="checkbox" id="chk-crt" checked>
+      <label for="chk-crt">CRT Interlacing</label>
+    </div>
+    <div class="ctrl-item">
+      <input type="checkbox" id="chk-bloom" checked>
+      <label for="chk-bloom">Vektorschirm-Glow (Bloom)</label>
+    </div>
+    <div class="ctrl-item">
+      <input type="checkbox" id="chk-music" checked>
+      <label for="chk-music">Musik</label>
+    </div>
+    <div class="ctrl-item">
+      <input type="checkbox" id="chk-sfx" checked>
+      <label for="chk-sfx">Sounds (SFX)</label>
+    </div>
+    <div style="color: #444;">|</div>
+    <div>P: Pause / E: Editor / Steuerung: Pfeiltasten oder WASD</div>
+  </div>
+
+  <!-- Main Game Code Modules -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
