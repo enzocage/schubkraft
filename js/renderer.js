@@ -5,7 +5,8 @@ import { drawVectorChar, drawVectorText } from './vectorFont.js';
 let animTick = 0;
 export function tickAnimation() { animTick++; }
 function variant() { return Math.floor(animTick / 12) % 5; }
-function vJitter(amount) { return (variant() - 2) * amount; }
+// Subtle wobble: ±0.3 of the given amount instead of ±2x
+function vJitter(amount) { return (variant() - 2) * amount * 0.3; }
 
 export function drawWireframePlanet(ctx, cx, cy, radius, rotation, color) {
   ctx.strokeStyle = color;
@@ -396,9 +397,16 @@ export function renderGame(canvas, ctx) {
     ctx.strokeRect(4, 4, 312, 192);
   }
 
+  if (state.gameState === STATE_PLAYING && state.paused) {
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, 0, 320, 200);
+    drawVectorText(ctx, "PAUSE", 122, 90, 0.85, "#7CFC00");
+    drawVectorText(ctx, "DRUECKE P ZUM FORTSETZEN", 78, 120, 0.3, "#888");
+  }
+
   if (state.gameState === STATE_TITLE) {
     renderTitleScreen(ctx);
-  } 
+  }
   else if (state.gameState === STATE_GAME_OVER) {
     renderGameOverScreen(ctx);
   }
@@ -634,14 +642,5 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
   let modeText = `MODUS: ${state.editorMode.toUpperCase()}`;
   if (state.editorMode === "entity") modeText += ` (${state.selectedEntityPreset.toUpperCase()})`;
   drawVectorText(ctx, modeText, state.editorCam.x - 150, state.editorCam.y - 92, 0.25, "#ffffff");
-  // CRT static noise overlay
-  ctx.save();
-  const crtAlpha = 0.03 + Math.random() * 0.02;
-  for (let i = 0; i < 60; i++) {
-    ctx.fillStyle = "rgba(255,255,255," + (crtAlpha * Math.random()).toFixed(3) + ")";
-    ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 3, 1);
-  }
-  ctx.restore();
-
   ctx.restore();
 }

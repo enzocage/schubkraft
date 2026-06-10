@@ -124,9 +124,7 @@ export function bindInputEvents(canvas) {
         toggleEditor(true);
       }
       if (e.key.toLowerCase() === "p") {
-        // Paused menu trigger
-        const pausePanel = document.getElementById("pause-menu-panel");
-        if (pausePanel) pausePanel.style.display = "block";
+        state.paused = !state.paused;
       }
     }
     else if (state.gameState === STATE_EDITOR) {

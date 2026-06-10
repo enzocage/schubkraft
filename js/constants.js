@@ -428,6 +428,7 @@ export const CAMPAIGN = [
 
 export const state = {
   gameState: STATE_TITLE,
+  paused: false,
   activeCampaignIdx: 0,
   activeLevel: null,
   score: 0,

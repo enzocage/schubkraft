@@ -24,10 +24,10 @@ const SFX_TEMPLATES = {
   // ===== FIRE WEAPON — Aggressive Laser/Blaster (redesigned) =====
   // Sawtooth+noise combo, fast descending ring-mod sweep for piercing SID blaster
   pew: {
-    priority: 3, wave: "sawtooth+noise",
-    adsr: [0, 3, 0, 2], pitch: { startNote: "C-7", slide: -56, curve: "exp" },
-    ringMod: true, filter: { mode: "hp", cutoff: 0.5, sweep: -0.03, res: 2 },
-    frames: { len: 8 }
+    priority: 3, wave: "sawtooth+pulse", pw: { start: 900, speed: 140 },
+    adsr: [0, 4, 0, 3], pitch: { startNote: "G-6", slide: -38, curve: "exp" },
+    filter: { mode: "hp", cutoff: 0.35, sweep: -0.025, res: 3 },
+    frames: { len: 10 }
   },
   // ===== TURRET FIRE =====
   turretShoot: {
@@ -37,9 +37,9 @@ const SFX_TEMPLATES = {
   },
   // ===== EXPLOSION (generic) =====
   explosion: {
-    priority: 4, wave: "noise", adsr: [3, 10, 0, 9],
-    pitch: { startFreq: 180, slide: -3.5, curve: "exp" },
-    filter: { mode: "lp", cutoff: 0.95, sweep: -0.025, res: 7 }, frames: { len: 42 }
+    priority: 4, wave: "noise", adsr: [1, 10, 0, 10],
+    pitch: { startFreq: 160, slide: -3.5, curve: "exp" },
+    filter: { mode: "lp", cutoff: 0.9, sweep: -0.02, res: 6 }, frames: { len: 48 }
   },
   // ===== SHIP DEATH — Distinct ship destruction =====
   // Deeper, longer explosion with more dramatic filter closure
@@ -63,9 +63,9 @@ const SFX_TEMPLATES = {
   },
   // ===== FUEL COLLECTED =====
   fuelCollected: {
-    priority: 2, wave: "pulse", pw: { start: 1500, speed: 80 },
-    adsr: [0, 5, 6, 4], pitch: { startNote: "C-4", slide: 28, curve: "linear" },
-    arp: { offsets: [0, 4, 7], speed: 2 }, frames: { len: 16 }
+    priority: 2, wave: "pulse", pw: { start: 1800, speed: 60 },
+    adsr: [0, 4, 5, 4], pitch: { startNote: "E-5", slide: 0 },
+    arp: { offsets: [0, 4, 7, 12], speed: 2 }, frames: { len: 14 }
   },
   // ===== LEVEL COMPLETE — Triumphant ascending fanfare =====
   levelComplete: {
@@ -131,8 +131,8 @@ const SFX_TEMPLATES = {
   // Frequency is modulated live in updatePersistentSounds for dynamic engine character.
   engineThrust: {
     priority: 1, wave: "noise+pulse", pw: { start: 1000, speed: 30 },
-    adsr: [2, 0, 15, 3], pitch: { startFreq: 35, slide: 0 },
-    filter: { mode: "lp", cutoff: 0.18, sweep: 0, res: 3 }, frames: { len: 99999 }
+    adsr: [3, 0, 13, 4], pitch: { startFreq: 35, slide: 0 },
+    filter: { mode: "lp", cutoff: 0.15, sweep: 0, res: 4 }, frames: { len: 99999 }
   },
   // ===== TRACTOR BEAM =====
   tractorBeam: {
@@ -165,15 +165,13 @@ const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 function shiftNote(noteStr, semitones) {
   if (!noteStr || noteStr === "---") return noteStr;
-  let name = noteStr.slice(0, -1);
-  const octave = parseInt(noteStr.slice(-1));
-  if (name === "Db") name = "C#";
-  else if (name === "Eb") name = "D#";
-  else if (name === "Gb") name = "F#";
-  else if (name === "Ab") name = "G#";
-  else if (name === "Bb") name = "A#";
-  const idx = NOTES.indexOf(name);
+  // Accepts "C-4", "C#4", "C#-4", "Db4", "Db-4"
+  const m = /^([A-Ga-g])([#b]?)-?(\d)$/.exec(noteStr);
+  if (!m) return noteStr;
+  let idx = NOTES.indexOf(m[1].toUpperCase() + (m[2] === "#" ? "#" : ""));
   if (idx === -1) return noteStr;
+  if (m[2] === "b") idx = (idx + 11) % 12;
+  const octave = parseInt(m[3]);
   let absMidi = 12 + octave * 12 + idx + semitones;
   if (absMidi < 0) absMidi = 0;
   if (absMidi > 127) absMidi = 127;
@@ -201,55 +199,53 @@ function generateVariant(template, vIdx, totalVariants) {
   const h = (i) => hash31(vIdx * 37 + i * 73 + totalVariants * 131);
   const r = (i, min, max) => min + h(i) * (max - min);
 
-  // Pitch variation
+  // Pitch variation — subtle detune, max ±2 semitones
   if (v.pitch) {
     if (v.pitch.startNote) {
-      const shift = Math.round(r(1, -3, 3));
+      const shift = Math.round(r(1, -2, 2));
       v.pitch.startNote = shiftNote(v.pitch.startNote, shift);
     }
     if (v.pitch.startFreq) {
-      v.pitch.startFreq *= r(2, 0.82, 1.18);
+      v.pitch.startFreq *= r(2, 0.92, 1.08);
       v.pitch.startFreq = clamp(v.pitch.startFreq, 10, 20000);
     }
     if (v.pitch.slide) {
-      v.pitch.slide *= r(3, 0.78, 1.22);
+      v.pitch.slide *= r(3, 0.88, 1.12);
     }
   }
 
   // ADSR tweaks — slightly different envelope per variant
   if (v.adsr) {
-    v.adsr[0] = clamp(Math.round(v.adsr[0] + r(4, -2, 2)), 0, 15);
-    v.adsr[1] = clamp(Math.round(v.adsr[1] + r(5, -3, 3)), 0, 15);
-    v.adsr[2] = clamp(Math.round(v.adsr[2] + r(6, -2, 2)), 0, 15);
-    v.adsr[3] = clamp(Math.round(v.adsr[3] + r(7, -2, 2)), 0, 15);
+    v.adsr[1] = clamp(Math.round(v.adsr[1] + r(5, -1, 1)), 0, 15);
+    v.adsr[3] = clamp(Math.round(v.adsr[3] + r(7, -1, 1)), 0, 15);
   }
 
   // Frame length variation — organic timing feel
   if (v.frames) {
-    v.frames.len = clamp(Math.round(v.frames.len * r(8, 0.78, 1.28)), 2, 99999);
+    v.frames.len = clamp(Math.round(v.frames.len * r(8, 0.9, 1.12)), 2, 99999);
   }
 
   // Filter variation
   if (v.filter) {
-    v.filter.cutoff = clamp(v.filter.cutoff * r(9, 0.88, 1.12), 0.01, 0.99);
+    v.filter.cutoff = clamp(v.filter.cutoff * r(9, 0.94, 1.06), 0.01, 0.99);
     if (v.filter.sweep) {
-      v.filter.sweep *= r(10, 0.82, 1.18);
+      v.filter.sweep *= r(10, 0.9, 1.1);
     }
-    v.filter.res = clamp(Math.round(v.filter.res + r(11, -2, 2)), 1, 12);
+    v.filter.res = clamp(Math.round(v.filter.res + r(11, -1, 1)), 1, 12);
   }
 
   // Pulse width variation
   if (v.pw) {
-    v.pw.start = clamp(Math.round(v.pw.start + r(12, -400, 400)), 0, 4095);
+    v.pw.start = clamp(Math.round(v.pw.start + r(12, -150, 150)), 0, 4095);
     if (v.pw.speed) {
-      v.pw.speed *= r(13, 0.82, 1.18);
+      v.pw.speed *= r(13, 0.9, 1.1);
     }
   }
 
   // Vibrato depth/speed variation
   if (v.vibrato) {
-    v.vibrato.depth = clamp(v.vibrato.depth * r(14, 0.7, 1.3), 1, 30);
-    v.vibrato.speed = clamp(v.vibrato.speed * r(15, 0.85, 1.15), 0.02, 0.5);
+    v.vibrato.depth = clamp(v.vibrato.depth * r(14, 0.85, 1.15), 1, 30);
+    v.vibrato.speed = clamp(v.vibrato.speed * r(15, 0.92, 1.08), 0.02, 0.5);
   }
 
   // Arp speed variation
@@ -537,13 +533,36 @@ const FALLBACK_SONG = {
 // ============================================================================
 // Init Audio — Build variants, fetch MIDI, create tracker song
 // ============================================================================
-export async function initAudio() {
-  if (sid) return;
+let initPromise = null;
 
+export function initAudio() {
+  if (initPromise) return initPromise;
+  initPromise = doInitAudio();
+  return initPromise;
+}
+
+async function doInitAudio() {
   // 1. Build SFX variant bank
   SFX_BANK = buildSfxBank(SFX_TEMPLATES, 10);
 
-  // 2. Try fetching & parsing MIDI for title music
+  // 2. Initialize SIDForge first — the AudioContext must be created
+  // synchronously inside the user gesture, before any awaits
+  let forge = null;
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    forge = await SidForge.create({ audioCtx });
+    forge.loadSfxBank(SFX_BANK);
+
+    const musicVol = state.musicEnabled ? 0.7 : 0.0;
+    const sfxVol = state.sfxEnabled ? 0.8 : 0.0;
+    forge.setVolume(musicVol, sfxVol);
+  } catch (err) {
+    console.error("Failed to initialize SIDForge Synthesizer:", err);
+    return;
+  }
+
+  // 3. Try fetching & parsing MIDI for title music
   try {
     const response = await fetch('debussy-clair-de-lune.mid');
     if (response.ok) {
@@ -559,21 +578,9 @@ export async function initAudio() {
     TRACKER_SONG = FALLBACK_SONG;
   }
 
-  // 3. Initialize SIDForge
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    sid = await SidForge.create({ audioCtx });
-    sid.loadSfxBank(SFX_BANK);
-    sid.loadSong(TRACKER_SONG);
-
-    const musicVol = state.musicEnabled ? 0.7 : 0.0;
-    const sfxVol = state.sfxEnabled ? 0.8 : 0.0;
-    sid.setVolume(musicVol, sfxVol);
-
-    console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${TRACKER_SONG.title}"`);
-  } catch (err) {
-    console.error("Failed to initialize SIDForge Synthesizer:", err);
-  }
+  forge.loadSong(TRACKER_SONG);
+  sid = forge; // publish only when fully ready
+  console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${TRACKER_SONG.title}"`);
 }
 
 // ============================================================================
@@ -588,7 +595,9 @@ export function resumeAudioContext() {
 export function playSFX(type) {
   if (!sid || !state.sfxEnabled) return;
   const variant = Math.floor(Math.random() * 10);
-  sid.playSfx(`${type}_v${variant}`, { voice: 2 });
+  // No fixed voice: let the allocator pick a free voice so one-shot SFX
+  // don't constantly cut the engine/drone loops living on voice 2
+  sid.playSfx(`${type}_v${variant}`);
 }
 
 export function updatePersistentSounds(thrustActive, fuelLeft, shipAlive) {
@@ -600,7 +609,7 @@ export function updatePersistentSounds(thrustActive, fuelLeft, shipAlive) {
     return;
   }
 
-  const shouldPlay = thrustActive && fuelLeft > 0 && shipAlive && state.gameState === STATE_PLAYING;
+  const shouldPlay = thrustActive && fuelLeft > 0 && shipAlive && state.gameState === STATE_PLAYING && !state.paused;
 
   if (shouldPlay) {
     if (!currentThrustActive) {
@@ -627,7 +636,7 @@ export function updateTractorSound(isActive, isSucking, shipAlive) {
     return;
   }
 
-  const shouldPlay = isActive && shipAlive && state.gameState === STATE_PLAYING;
+  const shouldPlay = isActive && shipAlive && state.gameState === STATE_PLAYING && !state.paused;
 
   if (shouldPlay) {
     if (!currentTractorActive) {
@@ -656,7 +665,7 @@ export function updateDroneSound(vx, vy, shipAlive) {
     return;
   }
 
-  const shouldPlay = shipAlive && state.gameState === STATE_PLAYING && !currentThrustActive && !currentTractorActive;
+  const shouldPlay = shipAlive && state.gameState === STATE_PLAYING && !state.paused && !currentThrustActive && !currentTractorActive;
 
   if (shouldPlay) {
     if (!currentDroneActive) {

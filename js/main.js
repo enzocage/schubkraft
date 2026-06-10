@@ -210,7 +210,7 @@ function coreGameLoop(time) {
 
   updateSequencer();
 
-  if (state.gameState === STATE_PLAYING) {
+  if (state.gameState === STATE_PLAYING && !state.paused) {
     gameLoopAccumulator += frameTime;
     while (gameLoopAccumulator >= FRAME_DT) {
       updatePhysics(FRAME_DT);
@@ -229,7 +229,8 @@ function coreGameLoop(time) {
         playSFX("respawn");
         loadLevel(state.activeLevel);
       } else {
-        if (state.score > state.highscores[4].score) {
+        const minScore = state.highscores.length >= 5 ? state.highscores[4].score : 0;
+        if (state.score > minScore) {
           state.gameState = STATE_HIGHSCORE;
           state.hsNewName = "AAA";
           state.hsNameIndex = 0;

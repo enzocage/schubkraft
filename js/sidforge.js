@@ -211,18 +211,14 @@ class SidCoreProcessor extends AudioWorkletProcessor {
 
   parseNote(str) {
     if (!str || str === "---" || str === "...") return null;
+    // Accepts "C-4", "C#4", "C#-4", "Db4", "Db-4"
+    const m = /^([A-Ga-g])([#b]?)-?(\d)$/.exec(str);
+    if (!m) return null;
     const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-    const name = str.substring(0, str.length - 1);
-    const oct = parseInt(str.charAt(str.length - 1));
-    let noteIdx = NOTES.indexOf(name);
-    if (noteIdx === -1) {
-      if (name === "Db") noteIdx = 1;
-      else if (name === "Eb") noteIdx = 3;
-      else if (name === "Gb") noteIdx = 6;
-      else if (name === "Ab") noteIdx = 8;
-      else if (name === "Bb") noteIdx = 10;
-    }
+    let noteIdx = NOTES.indexOf(m[1].toUpperCase() + (m[2] === "#" ? "#" : ""));
     if (noteIdx === -1) return null;
+    if (m[2] === "b") noteIdx = (noteIdx + 11) % 12;
+    const oct = parseInt(m[3]);
     return 12 + oct * 12 + noteIdx;
   }
 

@@ -30,6 +30,7 @@ export function loadLevel(levelData) {
   state.particles = [];
   state.shockwaves = [];
   state.reactorTimer = 0;
+  state.paused = false;
 
   state.entities = [];
   for (const ent of state.activeLevel.entities) {
@@ -809,7 +810,8 @@ function triggerLevelComplete() {
   
   setTimeout(() => {
     state.activeCampaignIdx = (state.activeCampaignIdx + 1) % CAMPAIGN.length;
-    let loadedPreset = CAMPAIGN[state.activeCampaignIdx];
+    // Clone so we never mutate the campaign preset itself
+    const loadedPreset = JSON.parse(JSON.stringify(CAMPAIGN[state.activeCampaignIdx]));
     if (state.activeCampaignIdx === 0) {
       loadedPreset.invertedGravity = true;
       showNotification("SCHWERKRAFT INVERTIERT!");
