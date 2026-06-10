@@ -6,9 +6,21 @@ export const STATE_EDITOR = "EDITOR";
 export const STATE_HIGHSCORE = "HIGHSCORE";
 
 export const THEMES = {
-  c64: { terrain: "#8B4A52", hatch: 3, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false },
-  inverted: { terrain: "#3CB043", hatch: 2, objects: "#FFFFFF", hud: "#FFFFFF", bg: "#000000", filled: true, fillColor: "#3CB043" },
-  bbc: { terrain: "#E03020", hatch: 0, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false }
+  c64: {
+    terrain: "#8B4A52", hatch: 3, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
+    edge: "#ff96a4",
+    raster: ["#3a1d22", "#5a2e35", "#8B4A52", "#b35f6b", "#d98a94", "#b35f6b", "#8B4A52", "#5a2e35"]
+  },
+  inverted: {
+    terrain: "#3CB043", hatch: 2, objects: "#FFFFFF", hud: "#FFFFFF", bg: "#000000", filled: true, fillColor: "#3CB043",
+    edge: "#a6ffae",
+    raster: ["#16451a", "#1f6326", "#2e8a35", "#3CB043", "#5ed967", "#3CB043", "#2e8a35", "#1f6326"]
+  },
+  bbc: {
+    terrain: "#E03020", hatch: 0, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
+    edge: "#ff8a70",
+    raster: ["#4a100a", "#7a1c10", "#a82618", "#E03020", "#ff6a4a", "#E03020", "#a82618", "#7a1c10"]
+  }
 };
 
 export const TITLE_MENU_ITEMS = ["SPIELEN", "KAMPAGNE SELECT", "LEVEL EDITOR", "HIGHSCORES"];

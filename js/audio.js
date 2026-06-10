@@ -21,130 +21,139 @@ let TRACKER_SONG = null;
 // Base SFX Templates — Optimized C64 SID Sound Design
 // ============================================================================
 const SFX_TEMPLATES = {
-  // ===== FIRE WEAPON — Aggressive Laser/Blaster (redesigned) =====
-  // Sawtooth+noise combo, fast descending ring-mod sweep for piercing SID blaster
+  // ===== FIRE WEAPON — Vicious SID zapper =====
+  // Hard-synced sawtooth+pulse with fast PWM and a screaming exponential dive
   pew: {
-    priority: 3, wave: "sawtooth+pulse", pw: { start: 900, speed: 140 },
-    adsr: [0, 4, 0, 3], pitch: { startNote: "G-6", slide: -38, curve: "exp" },
-    filter: { mode: "hp", cutoff: 0.35, sweep: -0.025, res: 3 },
-    frames: { len: 10 }
+    priority: 3, wave: "sawtooth+pulse", pw: { start: 700, speed: 260 },
+    adsr: [0, 5, 0, 3], pitch: { startNote: "C-7", slide: -44, curve: "exp" },
+    sync: true, filter: { mode: "hp", cutoff: 0.30, sweep: -0.03, res: 5 },
+    frames: { len: 12 }
   },
-  // ===== TURRET FIRE =====
+  // ===== TURRET FIRE — Heavy plasma thud =====
+  // Band-passed saw burst that drops an octave: reads as "incoming danger"
   turretShoot: {
-    priority: 2, wave: "sawtooth+pulse", pw: { start: 2048, speed: 60 },
-    adsr: [0, 4, 0, 2], pitch: { startNote: "G-4", slide: -32, curve: "exp" },
-    filter: { mode: "lp", cutoff: 0.9, sweep: -0.04, res: 4 }, frames: { len: 12 }
+    priority: 2, wave: "sawtooth+noise",
+    adsr: [0, 6, 0, 4], pitch: { startNote: "C-4", slide: -22, curve: "exp" },
+    filter: { mode: "bp", cutoff: 0.45, sweep: -0.035, res: 6 }, frames: { len: 16 }
   },
-  // ===== EXPLOSION (generic) =====
+  // ===== EXPLOSION (generic) — Big rolling boom =====
   explosion: {
-    priority: 4, wave: "noise", adsr: [1, 10, 0, 10],
-    pitch: { startFreq: 160, slide: -3.5, curve: "exp" },
-    filter: { mode: "lp", cutoff: 0.9, sweep: -0.02, res: 6 }, frames: { len: 48 }
+    priority: 4, wave: "noise", adsr: [0, 11, 2, 11],
+    pitch: { startFreq: 190, slide: -4, curve: "exp" },
+    filter: { mode: "lp", cutoff: 0.95, sweep: -0.016, res: 7 }, frames: { len: 60 }
   },
-  // ===== SHIP DEATH — Distinct ship destruction =====
-  // Deeper, longer explosion with more dramatic filter closure
+  // ===== SHIP DEATH — Long subterranean collapse =====
+  // Deep noise body with slow filter closure; reads as catastrophic
   shipDeath: {
-    priority: 5, wave: "noise", adsr: [2, 8, 0, 12],
-    pitch: { startFreq: 110, slide: -5, curve: "exp" },
-    filter: { mode: "lp", cutoff: 0.85, sweep: -0.028, res: 8 }, frames: { len: 55 }
+    priority: 5, wave: "noise", adsr: [0, 9, 3, 13],
+    pitch: { startFreq: 130, slide: -4.5, curve: "exp" },
+    filter: { mode: "lp", cutoff: 0.9, sweep: -0.012, res: 9 }, frames: { len: 75 }
   },
-  // ===== REACTOR MELTDOWN — Huge dramatic explosion =====
+  // ===== REACTOR MELTDOWN — Apocalyptic =====
   reactorMeltdown: {
-    priority: 5, wave: "noise", adsr: [4, 12, 0, 14],
-    pitch: { startFreq: 250, slide: -6, curve: "exp" },
-    filter: { mode: "lp", cutoff: 1.0, sweep: -0.022, res: 10 }, frames: { len: 70 }
+    priority: 5, wave: "noise+pulse", pw: { start: 2048, speed: -40 },
+    adsr: [2, 13, 4, 15], pitch: { startFreq: 320, slide: -5, curve: "exp" },
+    filter: { mode: "lp", cutoff: 1.0, sweep: -0.010, res: 11 }, frames: { len: 95 }
   },
-  // ===== TURRET DESTROYED — Metallic destruction =====
+  // ===== TURRET DESTROYED — Ring-modded metal shriek into crunch =====
   turretDestroyed: {
-    priority: 4, wave: "noise+pulse", pw: { start: 3000, speed: -100 },
-    adsr: [1, 6, 0, 7], pitch: { startFreq: 400, slide: -8, curve: "exp" },
-    ringMod: true, filter: { mode: "lp", cutoff: 0.7, sweep: -0.03, res: 6 },
-    frames: { len: 30 }
+    priority: 4, wave: "noise+pulse", pw: { start: 3400, speed: -160 },
+    adsr: [0, 7, 0, 9], pitch: { startFreq: 520, slide: -10, curve: "exp" },
+    ringMod: true, filter: { mode: "lp", cutoff: 0.75, sweep: -0.025, res: 8 },
+    frames: { len: 38 }
   },
-  // ===== FUEL COLLECTED =====
+  // ===== FUEL COLLECTED — Sparkling major arp chime =====
   fuelCollected: {
-    priority: 2, wave: "pulse", pw: { start: 1800, speed: 60 },
-    adsr: [0, 4, 5, 4], pitch: { startNote: "E-5", slide: 0 },
-    arp: { offsets: [0, 4, 7, 12], speed: 2 }, frames: { len: 14 }
+    priority: 2, wave: "pulse", pw: { start: 2000, speed: 90 },
+    adsr: [0, 5, 6, 5], pitch: { startNote: "E-5", slide: 2, curve: "linear" },
+    arp: { offsets: [0, 4, 7, 12, 16], speed: 1 },
+    filter: { mode: "hp", cutoff: 0.12, sweep: 0.01, res: 2 }, frames: { len: 18 }
   },
-  // ===== LEVEL COMPLETE — Triumphant ascending fanfare =====
+  // ===== LEVEL COMPLETE — Full victory fanfare =====
+  // Long rising arpeggio sweep with opening filter: pure 80s triumph
   levelComplete: {
-    priority: 4, wave: "pulse", pw: { start: 1800, speed: 60 },
-    adsr: [0, 4, 8, 5], pitch: { startNote: "C-4", slide: 40, curve: "linear" },
-    arp: { offsets: [0, 4, 7, 12], speed: 1 }, filter: { mode: "lp", cutoff: 0.6, sweep: 0.02, res: 2 },
-    frames: { len: 40 }
+    priority: 4, wave: "pulse", pw: { start: 1500, speed: 80 },
+    adsr: [1, 5, 9, 7], pitch: { startNote: "C-4", slide: 30, curve: "linear" },
+    arp: { offsets: [0, 4, 7, 12, 16, 19], speed: 1 },
+    filter: { mode: "lp", cutoff: 0.45, sweep: 0.012, res: 3 },
+    frames: { len: 55 }
   },
-  // ===== GAME OVER — Sad descending tone =====
+  // ===== GAME OVER — Doomy ring-modded descent =====
   gameOver: {
     priority: 4, wave: "triangle",
-    adsr: [1, 6, 4, 8], pitch: { startNote: "C-4", slide: -18, curve: "exp" },
-    arp: { offsets: [0, -4], speed: 4 }, frames: { len: 35 }
+    adsr: [2, 7, 5, 10], pitch: { startNote: "E-4", slide: -14, curve: "exp" },
+    ringMod: true, arp: { offsets: [0, -5, -12], speed: 5 },
+    vibrato: { speed: 0.08, depth: 3 }, frames: { len: 48 }
   },
-  // ===== RESPAWN — Quick ascending rebirth blip =====
+  // ===== RESPAWN — Teleport shimmer =====
   respawn: {
     priority: 3, wave: "triangle",
-    adsr: [0, 4, 0, 3], pitch: { startNote: "C-3", slide: 36, curve: "linear" },
-    arp: { offsets: [0, 7], speed: 2 }, frames: { len: 12 }
+    adsr: [0, 5, 2, 4], pitch: { startNote: "C-3", slide: 30, curve: "exp" },
+    arp: { offsets: [0, 7, 12], speed: 1 },
+    vibrato: { speed: 0.3, depth: 8 }, frames: { len: 16 }
   },
-  // ===== POD ATTACH =====
+  // ===== POD ATTACH — Magnetic clamp: metallic clunk + confirm chirp =====
   podAttach: {
-    priority: 2, wave: "triangle", adsr: [0, 3, 0, 3],
-    pitch: { startNote: "C-3", slide: -6, curve: "exp" },
-    ringMod: true, frames: { len: 8 }
+    priority: 2, wave: "triangle+pulse", pw: { start: 1200, speed: 150 },
+    adsr: [0, 4, 2, 4], pitch: { startNote: "G-2", slide: 14, curve: "exp" },
+    ringMod: true, arp: { offsets: [0, 12], speed: 3 }, frames: { len: 12 }
   },
-  // ===== SHIELD ACTIVATE — Energy field power-up =====
+  // ===== SHIELD ACTIVATE — Rising energy whoosh =====
   shieldActivate: {
-    priority: 2, wave: "pulse", pw: { start: 500, speed: 200 },
-    adsr: [0, 3, 2, 3], pitch: { startNote: "C-5", slide: 20, curve: "exp" },
-    filter: { mode: "hp", cutoff: 0.3, sweep: 0.06, res: 3 }, frames: { len: 10 }
+    priority: 2, wave: "pulse+noise", pw: { start: 400, speed: 300 },
+    adsr: [1, 4, 3, 4], pitch: { startNote: "G-4", slide: 26, curve: "exp" },
+    filter: { mode: "hp", cutoff: 0.18, sweep: 0.07, res: 4 }, frames: { len: 13 }
   },
-  // ===== SHIELD HIT PING =====
+  // ===== SHIELD HIT PING — Glassy synced ring =====
   shieldPing: {
-    priority: 2, wave: "pulse", pw: { start: 500, speed: 120 },
-    adsr: [0, 2, 0, 2], pitch: { startNote: "C-7", slide: -55, curve: "exp" },
-    sync: true, frames: { len: 6 }
+    priority: 2, wave: "pulse", pw: { start: 600, speed: 180 },
+    adsr: [0, 3, 0, 4], pitch: { startNote: "E-7", slide: -38, curve: "exp" },
+    sync: true, ringMod: true,
+    filter: { mode: "hp", cutoff: 0.4, sweep: -0.02, res: 7 }, frames: { len: 9 }
   },
-  // ===== PROJECTILE HIT TERRAIN — Small ricochet =====
+  // ===== PROJECTILE HIT TERRAIN — Gritty ricochet snap =====
   projectileHit: {
     priority: 1, wave: "noise",
-    adsr: [0, 2, 0, 1], pitch: { startFreq: 800, slide: -15, curve: "exp" },
-    filter: { mode: "hp", cutoff: 0.6, sweep: -0.02, res: 1 }, frames: { len: 4 }
+    adsr: [0, 3, 0, 2], pitch: { startFreq: 1400, slide: -22, curve: "exp" },
+    filter: { mode: "bp", cutoff: 0.55, sweep: -0.04, res: 4 }, frames: { len: 6 }
   },
-  // ===== DOOR HISS =====
+  // ===== DOOR HISS — Pneumatic pressure release =====
   doorHiss: {
-    priority: 1, wave: "noise", adsr: [1, 7, 0, 5],
-    filter: { mode: "hp", cutoff: 0.35, sweep: 0.03, res: 5 }, frames: { len: 20 }
+    priority: 1, wave: "noise", adsr: [3, 8, 2, 7],
+    pitch: { startFreq: 900, slide: 4, curve: "linear" },
+    filter: { mode: "hp", cutoff: 0.25, sweep: 0.035, res: 6 }, frames: { len: 28 }
   },
-  // ===== LOW FUEL WARNING — Urgent oscillating alarm =====
+  // ===== LOW FUEL WARNING — Klaxon two-tone =====
   lowFuel: {
-    priority: 2, wave: "triangle", adsr: [0, 3, 0, 2],
-    pitch: { startNote: "G-5", slide: 0 },
-    arp: { offsets: [0, -3], speed: 3 }, frames: { len: 6 }
+    priority: 2, wave: "pulse", pw: { start: 2048, speed: 0 },
+    adsr: [0, 4, 4, 3], pitch: { startNote: "A-5", slide: 0 },
+    arp: { offsets: [0, -5], speed: 4 },
+    filter: { mode: "bp", cutoff: 0.5, sweep: 0, res: 5 }, frames: { len: 10 }
   },
-  // ===== MENU SELECT =====
+  // ===== MENU SELECT — Crisp blip with sparkle =====
   select: {
-    priority: 2, wave: "pulse", pw: { start: 500, speed: 150 },
-    adsr: [0, 3, 0, 2], pitch: { startNote: "C-5", slide: 0 }, frames: { len: 5 }
+    priority: 2, wave: "pulse", pw: { start: 800, speed: 200 },
+    adsr: [0, 3, 0, 2], pitch: { startNote: "E-5", slide: 8, curve: "linear" },
+    arp: { offsets: [0, 12], speed: 2 }, frames: { len: 6 }
   },
-  // ===== ENGINE THRUST — Aggressive rocket rumble (redesigned) =====
-  // Noise+pulse low-frequency combo with tight LP filter for deep, powerful rumble.
-  // Frequency is modulated live in updatePersistentSounds for dynamic engine character.
+  // ===== ENGINE THRUST — Deep throbbing rocket rumble =====
+  // Noise+pulse with slow PWM throb; frequency is modulated live per frame
   engineThrust: {
-    priority: 1, wave: "noise+pulse", pw: { start: 1000, speed: 30 },
-    adsr: [3, 0, 13, 4], pitch: { startFreq: 35, slide: 0 },
-    filter: { mode: "lp", cutoff: 0.15, sweep: 0, res: 4 }, frames: { len: 99999 }
+    priority: 1, wave: "noise+pulse", pw: { start: 800, speed: 55 },
+    adsr: [3, 0, 13, 5], pitch: { startFreq: 32, slide: 0 },
+    filter: { mode: "lp", cutoff: 0.13, sweep: 0, res: 5 }, frames: { len: 99999 }
   },
-  // ===== TRACTOR BEAM =====
+  // ===== TRACTOR BEAM — Sci-fi force hum =====
   tractorBeam: {
-    priority: 1, wave: "triangle", adsr: [1, 0, 15, 2],
-    pitch: { startFreq: 150, slide: 0 },
-    ringMod: true, vibrato: { speed: 0.12, depth: 6 }, frames: { len: 99999 }
+    priority: 1, wave: "triangle+pulse", pw: { start: 1400, speed: 70 },
+    adsr: [2, 0, 14, 3], pitch: { startFreq: 140, slide: 0 },
+    ringMod: true, vibrato: { speed: 0.18, depth: 11 }, frames: { len: 99999 }
   },
-  // ===== AMBIENT DRONE =====
+  // ===== AMBIENT DRONE — Cavern hum, speed-modulated =====
   drone: {
-    priority: 0, wave: "triangle", adsr: [3, 0, 15, 2],
-    pitch: { startFreq: 55, slide: 0 },
-    vibrato: { speed: 0.08, depth: 4 }, frames: { len: 99999 }
+    priority: 0, wave: "triangle", adsr: [4, 0, 13, 3],
+    pitch: { startFreq: 50, slide: 0 },
+    vibrato: { speed: 0.06, depth: 5 }, frames: { len: 99999 }
   }
 };
 

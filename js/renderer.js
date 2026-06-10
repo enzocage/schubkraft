@@ -130,6 +130,30 @@ export function renderGame(canvas, ctx) {
     ctx.drawImage(state.bakedTerrainCanvas, 0, 0);
   }
 
+  // 3b. Live breathing neon pulse along the terrain contours.
+  // The static glow is baked; this thin animated pass makes walls feel alive.
+  if (state.useBloom && state.activeLevel.polygons.length > 0) {
+    const themeLive = THEMES[state.activeLevel.theme] || THEMES.c64;
+    const breathe = 0.35 + 0.25 * Math.sin(Date.now() * 0.0016);
+    ctx.save();
+    ctx.globalAlpha = breathe;
+    ctx.shadowBlur = 7 * dpr;
+    ctx.shadowColor = themeLive.edge || themeLive.terrain;
+    ctx.strokeStyle = themeLive.edge || themeLive.terrain;
+    ctx.lineWidth = (1.2 * dpr) / Math.min(scaleX, scaleY);
+    for (const poly of state.activeLevel.polygons) {
+      if (poly.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) {
+        ctx.lineTo(poly[i][0], poly[i][1]);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Draw exit line
   ctx.strokeStyle = "rgba(255, 255, 0, 0.25)";
   ctx.lineWidth = dpr / Math.min(scaleX, scaleY);

@@ -121,36 +121,62 @@ export function bakeTerrain() {
   offCtx.fillStyle = themePreset.bg;
   offCtx.fillRect(0, 0, maxW, maxH);
 
+  const tracePoly = (c, poly) => {
+    c.beginPath();
+    c.moveTo(poly[0][0], poly[0][1]);
+    for (let i = 1; i < poly.length; i++) {
+      c.lineTo(poly[i][0], poly[i][1]);
+    }
+    c.closePath();
+  };
+
   if (themePreset.filled) {
     offCtx.fillStyle = themePreset.fillColor;
     for (const poly of state.activeLevel.polygons) {
       if (poly.length < 3) continue;
-      offCtx.beginPath();
-      offCtx.moveTo(poly[0][0], poly[0][1]);
-      for (let i = 1; i < poly.length; i++) {
-        offCtx.lineTo(poly[i][0], poly[i][1]);
-      }
-      offCtx.closePath();
+      tracePoly(offCtx, poly);
       offCtx.fill();
     }
   }
 
+  // Rasterbar interior: C64-style horizontal scanlines whose color cycles
+  // through a smooth band palette — classic demo-scene rasterline look
+  const raster = themePreset.raster || [themePreset.terrain];
   if (themePreset.hatch > 0) {
     for (const poly of state.activeLevel.polygons) {
       if (poly.length < 3) continue;
       offCtx.save();
-      offCtx.beginPath();
-      offCtx.moveTo(poly[0][0], poly[0][1]);
-      for (let i = 1; i < poly.length; i++) {
-        offCtx.lineTo(poly[i][0], poly[i][1]);
-      }
-      offCtx.closePath();
+      tracePoly(offCtx, poly);
       offCtx.clip();
 
-      offCtx.strokeStyle = themePreset.terrain;
       offCtx.lineWidth = 1;
       const step = themePreset.hatch === 3 ? 3 : 2;
+      const bandHeight = 14; // px per palette entry → slow vertical color roll
       for (let y = 0; y < maxH; y += step) {
+        // Blend smoothly between adjacent raster band colors
+        const bandPos = (y / bandHeight) % raster.length;
+        offCtx.strokeStyle = raster[Math.floor(bandPos)];
+        offCtx.beginPath();
+        offCtx.moveTo(0, y);
+        offCtx.lineTo(maxW, y);
+        offCtx.stroke();
+      }
+      offCtx.restore();
+    }
+  }
+  // BBC outline theme gets a faint scanline wash inside so caverns read as solid
+  else if (!themePreset.filled) {
+    for (const poly of state.activeLevel.polygons) {
+      if (poly.length < 3) continue;
+      offCtx.save();
+      tracePoly(offCtx, poly);
+      offCtx.clip();
+      offCtx.lineWidth = 1;
+      const bandHeight = 14;
+      for (let y = 0; y < maxH; y += 4) {
+        const bandPos = (y / bandHeight) % raster.length;
+        offCtx.globalAlpha = 0.22;
+        offCtx.strokeStyle = raster[Math.floor(bandPos)];
         offCtx.beginPath();
         offCtx.moveTo(0, y);
         offCtx.lineTo(maxW, y);
@@ -160,16 +186,29 @@ export function bakeTerrain() {
     }
   }
 
-  offCtx.strokeStyle = themePreset.terrain;
-  offCtx.lineWidth = themePreset.hatch === 0 ? 1.0 : 1.8;
+  // Baked soft neon glow: stroke the contour twice with heavy shadow blur,
+  // then once more as a wide dim halo line beneath the bright edge
+  for (const pass of [{ blur: 9, width: 2.6, alpha: 0.55 }, { blur: 4, width: 1.6, alpha: 0.9 }]) {
+    offCtx.save();
+    offCtx.shadowBlur = pass.blur;
+    offCtx.shadowColor = themePreset.edge || themePreset.terrain;
+    offCtx.globalAlpha = pass.alpha;
+    offCtx.strokeStyle = themePreset.terrain;
+    offCtx.lineWidth = pass.width;
+    for (const poly of state.activeLevel.polygons) {
+      if (poly.length < 2) continue;
+      tracePoly(offCtx, poly);
+      offCtx.stroke();
+    }
+    offCtx.restore();
+  }
+
+  // Crisp bright core line on top — the "hot" neon filament
+  offCtx.strokeStyle = themePreset.edge || themePreset.terrain;
+  offCtx.lineWidth = 0.9;
   for (const poly of state.activeLevel.polygons) {
     if (poly.length < 2) continue;
-    offCtx.beginPath();
-    offCtx.moveTo(poly[0][0], poly[0][1]);
-    for (let i = 1; i < poly.length; i++) {
-      offCtx.lineTo(poly[i][0], poly[i][1]);
-    }
-    offCtx.closePath();
+    tracePoly(offCtx, poly);
     offCtx.stroke();
   }
 }
