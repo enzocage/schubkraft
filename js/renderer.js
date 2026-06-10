@@ -241,7 +241,7 @@ export function renderGame(canvas, ctx) {
     ctx.stroke();
 
     // Thrust Flame & Glow
-    if (state.keys.thrust && state.ship.fuel > 0 && state.keys.wHoldTime <= 0.25) {
+    if (state.keys.thrust && state.ship.fuel > 0) {
       ctx.save();
       ctx.shadowBlur = 0;
       const grad = ctx.createRadialGradient(-6, 0, 1, -6, 0, 11 + Math.random() * 8);

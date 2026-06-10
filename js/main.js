@@ -127,7 +127,7 @@ function updateVisualEffects(dt) {
   }
 
   // Spawning continuous orange thruster rocket sparks
-  if (state.keys.thrust && state.keys.wHoldTime <= 0.25 && state.ship.fuel > 0 && state.ship.alive && state.gameState === STATE_PLAYING) {
+  if (state.keys.thrust && state.ship.fuel > 0 && state.ship.alive && state.gameState === STATE_PLAYING) {
     if (Math.random() < 0.6) {
       const nozzleX = state.ship.x - Math.cos(state.ship.angle) * 4;
       const nozzleY = state.ship.y - Math.sin(state.ship.angle) * 4;
@@ -189,7 +189,7 @@ function coreGameLoop(time) {
   }
 
   updateVisualEffects(frameTime);
-  updatePersistentSounds(state.keys.thrust && state.keys.wHoldTime <= 0.25, state.ship.fuel, state.ship.alive);
+  updatePersistentSounds(state.keys.thrust, state.ship.fuel, state.ship.alive);
   updateDroneSound(state.ship.vx, state.ship.vy, state.ship.alive);
 
   if (state.gameState === STATE_PLAYING && !state.ship.alive) {
@@ -408,6 +408,7 @@ document.getElementById("btn-export").addEventListener("click", () => {
   document.getElementById("modal-title").innerText = "Level JSON Export";
   document.getElementById("json-textarea").value = JSON.stringify(state.activeLevel, null, 2);
   document.getElementById("btn-import-json").style.display = "none";
+  document.getElementById("btn-upload-json").style.display = "none";
   document.getElementById("json-modal").style.display = "block";
 });
 
@@ -416,6 +417,7 @@ document.getElementById("btn-import").addEventListener("click", () => {
   document.getElementById("json-textarea").value = "";
   document.getElementById("json-textarea").readOnly = false;
   document.getElementById("btn-import-json").style.display = "block";
+  document.getElementById("btn-upload-json").style.display = "block";
   document.getElementById("json-modal").style.display = "block";
 });
 
@@ -440,6 +442,37 @@ document.getElementById("btn-copy-json").addEventListener("click", () => {
   el.select();
   document.execCommand("copy");
   showNotification("KOPIERT!");
+});
+
+document.getElementById("btn-download-json").addEventListener("click", () => {
+  try {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.activeLevel, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `${state.activeLevel.name || 'custom_level'}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showNotification("DATEI GESPEICHERT!");
+  } catch (err) {
+    alert("Fehler beim Erstellen der Datei!");
+  }
+});
+
+document.getElementById("btn-upload-json").addEventListener("click", () => {
+  document.getElementById("file-import-input").click();
+});
+
+document.getElementById("file-import-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    document.getElementById("json-textarea").value = event.target.result;
+    showNotification("DATEI GELADEN! KLICKE IMPORTIEREN");
+  };
+  reader.readAsText(file);
 });
 
 document.getElementById("btn-close-modal").addEventListener("click", () => {

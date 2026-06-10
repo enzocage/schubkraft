@@ -343,10 +343,17 @@
         <div class="dialog-title" id="modal-title">Level JSON</div>
         <div class="dialog-body">
           <textarea id="json-textarea" class="json-area" readonly></textarea>
-          <div style="display:flex; gap:12px;">
-            <button id="btn-copy-json" class="editor-btn" style="flex:1;">Kopieren</button>
-            <button id="btn-import-json" class="editor-btn" style="flex:1; display:none;">Importieren</button>
-            <button id="btn-close-modal" class="editor-btn">Schließen</button>
+          <input type="file" id="file-import-input" style="display:none;" accept=".json">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; gap:12px;">
+              <button id="btn-copy-json" class="editor-btn" style="flex:1;">Kopieren</button>
+              <button id="btn-download-json" class="editor-btn" style="flex:1;">Herunterladen</button>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button id="btn-upload-json" class="editor-btn" style="flex:1; display:none;">Datei wählen</button>
+              <button id="btn-import-json" class="editor-btn" style="flex:1; display:none;">Importieren</button>
+              <button id="btn-close-modal" class="editor-btn" style="flex:1;">Schließen</button>
+            </div>
           </div>
         </div>
       </div>

@@ -191,7 +191,7 @@ export function updatePhysics(dt) {
 
   state.ship.shieldActive = state.keys.shield && state.ship.fuel > 0;
 
-  if (state.keys.thrust && state.keys.wHoldTime <= 0.25 && state.ship.fuel > 0 && state.ship.alive) {
+  if (state.keys.thrust && state.ship.fuel > 0 && state.ship.alive) {
     state.ship.fuel = Math.max(0, state.ship.fuel - 1.25);
   }
   if (state.ship.shieldActive && state.ship.fuel > 0 && state.ship.alive) {
@@ -219,7 +219,7 @@ export function updatePhysics(dt) {
 
     let thrustX = 0;
     let thrustY = 0;
-    if (state.keys.thrust && state.keys.wHoldTime <= 0.25 && state.ship.fuel > 0 && state.ship.alive) {
+    if (state.keys.thrust && state.ship.fuel > 0 && state.ship.alive) {
       const THRUST_ACC = 0.088;
       thrustX = Math.cos(state.ship.angle) * THRUST_ACC;
       thrustY = Math.sin(state.ship.angle) * THRUST_ACC;
