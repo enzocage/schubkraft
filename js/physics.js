@@ -542,11 +542,11 @@ export function explodeShip() {
   state.ship.alive = false;
   state.ship.respawnTimer = 2.0;
   
-  playSFX("explosion");
-  state.screenShake = 20;
-  state.flashTimer = 0.4;
+  playSFX("shipDeath");
+  state.screenShake = 24;
+  state.flashTimer = 0.5;
   
-  spawnExplosionParticles(state.ship.x, state.ship.y, 25);
+  spawnExplosionParticles(state.ship.x, state.ship.y, 30);
   spawnShockwave(state.ship.x, state.ship.y, "#ffaa00");
   state.lives--;
   
@@ -584,6 +584,7 @@ function updateProjectiles(dt) {
     const hitTerrain = checkRaycastTerrain({ x: p.x, y: p.y }, { x: nextX, y: nextY });
     if (hitTerrain) {
       spawnSparks(hitTerrain.x, hitTerrain.y, "#ffffff", 5);
+      playSFX("projectileHit");
       state.projectiles.splice(i, 1);
       continue;
     }
@@ -634,13 +635,13 @@ function updateProjectiles(dt) {
             ent.active = false;
             spawnExplosionParticles(ent.x, ent.y, 10);
             spawnShockwave(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500");
-            playSFX("explosion");
-            
             if (ent.type === "turret") {
+              playSFX("turretDestroyed");
               state.score += 750;
               showNotification("+750 ABWEHRTURM");
             } 
             else if (ent.type === "fuel") {
+              playSFX("explosion");
               showNotification("SPEICHER ZERSTÖRT!");
             }
             else if (ent.type === "reactor") {
@@ -798,7 +799,7 @@ function updateEntities(dt) {
 
 function triggerLevelComplete() {
   state.gameState = STATE_LEVEL_COMPLETE;
-  playSFX("fuelCollected");
+  playSFX("levelComplete");
   
   const bonusFuel = Math.ceil(state.ship.fuel);
   const tetherBonus = state.pod.attached ? 2000 : 0;

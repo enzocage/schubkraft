@@ -21,59 +21,126 @@ let TRACKER_SONG = null;
 // Base SFX Templates — Optimized C64 SID Sound Design
 // ============================================================================
 const SFX_TEMPLATES = {
+  // ===== FIRE WEAPON — Aggressive Laser/Blaster (redesigned) =====
+  // Sawtooth+noise combo, fast descending ring-mod sweep for piercing SID blaster
   pew: {
-    priority: 3, wave: "pulse", pw: { start: 800, speed: -40 },
-    adsr: [0, 3, 0, 2], pitch: { startNote: "C-7", slide: -48, curve: "exp" },
-    ringMod: true, frames: { len: 10 }
+    priority: 3, wave: "sawtooth+noise",
+    adsr: [0, 3, 0, 2], pitch: { startNote: "C-7", slide: -56, curve: "exp" },
+    ringMod: true, filter: { mode: "hp", cutoff: 0.5, sweep: -0.03, res: 2 },
+    frames: { len: 8 }
   },
+  // ===== TURRET FIRE =====
   turretShoot: {
     priority: 2, wave: "sawtooth+pulse", pw: { start: 2048, speed: 60 },
     adsr: [0, 4, 0, 2], pitch: { startNote: "G-4", slide: -32, curve: "exp" },
     filter: { mode: "lp", cutoff: 0.9, sweep: -0.04, res: 4 }, frames: { len: 12 }
   },
+  // ===== EXPLOSION (generic) =====
   explosion: {
     priority: 4, wave: "noise", adsr: [3, 10, 0, 9],
     pitch: { startFreq: 180, slide: -3.5, curve: "exp" },
     filter: { mode: "lp", cutoff: 0.95, sweep: -0.025, res: 7 }, frames: { len: 42 }
   },
+  // ===== SHIP DEATH — Distinct ship destruction =====
+  // Deeper, longer explosion with more dramatic filter closure
+  shipDeath: {
+    priority: 5, wave: "noise", adsr: [2, 8, 0, 12],
+    pitch: { startFreq: 110, slide: -5, curve: "exp" },
+    filter: { mode: "lp", cutoff: 0.85, sweep: -0.028, res: 8 }, frames: { len: 55 }
+  },
+  // ===== REACTOR MELTDOWN — Huge dramatic explosion =====
+  reactorMeltdown: {
+    priority: 5, wave: "noise", adsr: [4, 12, 0, 14],
+    pitch: { startFreq: 250, slide: -6, curve: "exp" },
+    filter: { mode: "lp", cutoff: 1.0, sweep: -0.022, res: 10 }, frames: { len: 70 }
+  },
+  // ===== TURRET DESTROYED — Metallic destruction =====
+  turretDestroyed: {
+    priority: 4, wave: "noise+pulse", pw: { start: 3000, speed: -100 },
+    adsr: [1, 6, 0, 7], pitch: { startFreq: 400, slide: -8, curve: "exp" },
+    ringMod: true, filter: { mode: "lp", cutoff: 0.7, sweep: -0.03, res: 6 },
+    frames: { len: 30 }
+  },
+  // ===== FUEL COLLECTED =====
   fuelCollected: {
     priority: 2, wave: "pulse", pw: { start: 1500, speed: 80 },
     adsr: [0, 5, 6, 4], pitch: { startNote: "C-4", slide: 28, curve: "linear" },
     arp: { offsets: [0, 4, 7], speed: 2 }, frames: { len: 16 }
   },
+  // ===== LEVEL COMPLETE — Triumphant ascending fanfare =====
+  levelComplete: {
+    priority: 4, wave: "pulse", pw: { start: 1800, speed: 60 },
+    adsr: [0, 4, 8, 5], pitch: { startNote: "C-4", slide: 40, curve: "linear" },
+    arp: { offsets: [0, 4, 7, 12], speed: 1 }, filter: { mode: "lp", cutoff: 0.6, sweep: 0.02, res: 2 },
+    frames: { len: 40 }
+  },
+  // ===== GAME OVER — Sad descending tone =====
+  gameOver: {
+    priority: 4, wave: "triangle",
+    adsr: [1, 6, 4, 8], pitch: { startNote: "C-4", slide: -18, curve: "exp" },
+    arp: { offsets: [0, -4], speed: 4 }, frames: { len: 35 }
+  },
+  // ===== RESPAWN — Quick ascending rebirth blip =====
+  respawn: {
+    priority: 3, wave: "triangle",
+    adsr: [0, 4, 0, 3], pitch: { startNote: "C-3", slide: 36, curve: "linear" },
+    arp: { offsets: [0, 7], speed: 2 }, frames: { len: 12 }
+  },
+  // ===== POD ATTACH =====
   podAttach: {
     priority: 2, wave: "triangle", adsr: [0, 3, 0, 3],
     pitch: { startNote: "C-3", slide: -6, curve: "exp" },
     ringMod: true, frames: { len: 8 }
   },
+  // ===== SHIELD ACTIVATE — Energy field power-up =====
+  shieldActivate: {
+    priority: 2, wave: "pulse", pw: { start: 500, speed: 200 },
+    adsr: [0, 3, 2, 3], pitch: { startNote: "C-5", slide: 20, curve: "exp" },
+    filter: { mode: "hp", cutoff: 0.3, sweep: 0.06, res: 3 }, frames: { len: 10 }
+  },
+  // ===== SHIELD HIT PING =====
   shieldPing: {
     priority: 2, wave: "pulse", pw: { start: 500, speed: 120 },
     adsr: [0, 2, 0, 2], pitch: { startNote: "C-7", slide: -55, curve: "exp" },
     sync: true, frames: { len: 6 }
   },
+  // ===== PROJECTILE HIT TERRAIN — Small ricochet =====
+  projectileHit: {
+    priority: 1, wave: "noise",
+    adsr: [0, 2, 0, 1], pitch: { startFreq: 800, slide: -15, curve: "exp" },
+    filter: { mode: "hp", cutoff: 0.6, sweep: -0.02, res: 1 }, frames: { len: 4 }
+  },
+  // ===== DOOR HISS =====
   doorHiss: {
     priority: 1, wave: "noise", adsr: [1, 7, 0, 5],
     filter: { mode: "hp", cutoff: 0.35, sweep: 0.03, res: 5 }, frames: { len: 20 }
   },
+  // ===== LOW FUEL WARNING — Urgent oscillating alarm =====
   lowFuel: {
     priority: 2, wave: "triangle", adsr: [0, 3, 0, 2],
     pitch: { startNote: "G-5", slide: 0 },
     arp: { offsets: [0, -3], speed: 3 }, frames: { len: 6 }
   },
+  // ===== MENU SELECT =====
   select: {
     priority: 2, wave: "pulse", pw: { start: 500, speed: 150 },
     adsr: [0, 3, 0, 2], pitch: { startNote: "C-5", slide: 0 }, frames: { len: 5 }
   },
+  // ===== ENGINE THRUST — Aggressive rocket rumble (redesigned) =====
+  // Noise+pulse low-frequency combo with tight LP filter for deep, powerful rumble.
+  // Frequency is modulated live in updatePersistentSounds for dynamic engine character.
   engineThrust: {
-    priority: 1, wave: "noise", adsr: [1, 0, 15, 2],
-    pitch: { startFreq: 42, slide: 0 },
-    filter: { mode: "lp", cutoff: 0.2, sweep: 0, res: 1 }, frames: { len: 99999 }
+    priority: 1, wave: "noise+pulse", pw: { start: 1000, speed: 30 },
+    adsr: [2, 0, 15, 3], pitch: { startFreq: 35, slide: 0 },
+    filter: { mode: "lp", cutoff: 0.18, sweep: 0, res: 3 }, frames: { len: 99999 }
   },
+  // ===== TRACTOR BEAM =====
   tractorBeam: {
     priority: 1, wave: "triangle", adsr: [1, 0, 15, 2],
     pitch: { startFreq: 150, slide: 0 },
     ringMod: true, vibrato: { speed: 0.12, depth: 6 }, frames: { len: 99999 }
   },
+  // ===== AMBIENT DRONE =====
   drone: {
     priority: 0, wave: "triangle", adsr: [3, 0, 15, 2],
     pitch: { startFreq: 55, slide: 0 },

@@ -225,6 +225,7 @@ function coreGameLoop(time) {
     state.ship.respawnTimer -= frameTime;
     if (state.ship.respawnTimer <= 0) {
       if (state.lives > 0) {
+        playSFX("respawn");
         loadLevel(state.activeLevel);
       } else {
         if (state.score > state.highscores[4].score) {
@@ -234,6 +235,7 @@ function coreGameLoop(time) {
           showNotification("BESTENLISTE ERREICHT! NAME EINGEBEN");
         } else {
           state.gameState = STATE_GAME_OVER;
+          playSFX("gameOver");
         }
         updateTractorSound(false, false, false);
       }

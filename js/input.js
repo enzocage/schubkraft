@@ -111,8 +111,10 @@ export function bindInputEvents(canvas) {
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") state.keys.rotateRight = true;
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") state.keys.thrust = true;
       if (e.key === "Shift" || e.key.toLowerCase() === "s") {
+        const wasShield = state.keys.shield;
         state.keys.shieldReal = true;
         state.keys.shield = true;
+        if (!wasShield && state.ship.alive && state.ship.fuel > 0) playSFX("shieldActivate");
       }
       if (e.key === " ") {
         state.keys.fire = true;
