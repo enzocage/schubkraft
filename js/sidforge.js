@@ -189,6 +189,12 @@ class SidCoreProcessor extends AudioWorkletProcessor {
       filter: sfxData.filter || null,
       currentFilterCutoff: sfxData.filter ? sfxData.filter.cutoff : 0.5,
       filterSweep: sfxData.filter ? sfxData.filter.sweep : 0,
+      ringMod: sfxData.ringMod || false,
+      sync: sfxData.sync || false,
+      vibrato: sfxData.vibrato || null,
+      vibratoPhase: 0,
+      arp: sfxData.arp || null,
+      arpTimer: 0,
       gate: true,
       age: 0,
       duration: sfxData.frames ? sfxData.frames.len : 30
@@ -268,12 +274,36 @@ class SidCoreProcessor extends AudioWorkletProcessor {
           }
           
           const voice = this.voices[v];
-          voice.freq = sfx.currentFreq;
+
+          // C64 ring modulation & hard sync
+          voice.ringMod = sfx.ringMod;
+          voice.sync = sfx.sync;
+
+          // Vibrato (SID-style LFO on frequency)
+          let modFreq = sfx.currentFreq;
+          if (sfx.vibrato) {
+            sfx.vibratoPhase += (sfx.vibrato.speed || 0.15);
+            const vibDepth = sfx.vibrato.depth || 8;
+            modFreq += Math.sin(sfx.vibratoPhase) * vibDepth;
+          }
+
+          // Arpeggio (trademark SID fast note cycling)
+          if (sfx.arp) {
+            sfx.arpTimer++;
+            if (sfx.arpTimer >= (sfx.arp.speed || 2)) {
+              sfx.arpTimer = 0;
+              sfx.arpStep = ((sfx.arpStep || 0) + 1) % sfx.arp.offsets.length;
+            }
+            const arpOffset = sfx.arp.offsets[sfx.arpStep || 0];
+            modFreq *= Math.pow(2.0, arpOffset / 12.0);
+          }
+
+          voice.freq = Math.max(10, Math.min(20000, modFreq));
           voice.wave = sfx.wave;
           if (sfx.pw) voice.pw = sfx.currentPw;
           voice.adsr = sfx.adsr;
           voice.gate = sfx.gate;
-          
+
           if (sfx.filter) {
             voice.filterEnabled = true;
             this.filter.cutoff = sfx.currentFilterCutoff * 8000 + 80;
@@ -545,33 +575,38 @@ class SidCoreProcessor extends AudioWorkletProcessor {
       const voice = this.voices[v];
       let out = 0;
       
-      switch (voice.wave) {
-        case "triangle":
-          out = (voice.phase < 0.5) ? (4.0 * voice.phase - 1.0) : (3.0 - 4.0 * voice.phase);
-          break;
-        case "sawtooth":
-          out = 2.0 * voice.phase - 1.0;
-          break;
-        case "pulse":
-          const duty = voice.pw / 4096.0;
-          out = (voice.phase < duty) ? 1.0 : -1.0;
-          break;
-        case "noise":
-          const phaseInt = Math.floor(voice.phase * 16777216);
-          const bit19 = (phaseInt >> 19) & 1;
-          if (bit19 !== voice.prevBit19) {
-            voice.prevBit19 = bit19;
-            const bit = ((voice.lfsr >> 22) ^ (voice.lfsr >> 17)) & 1;
-            voice.lfsr = ((voice.lfsr << 1) | bit) & 0x7FFFFF;
-          }
-          out = ((voice.lfsr & 0xFF) / 127.5) - 1.0;
-          break;
-        default:
-          out = 0;
-          break;
+      // C64 combined waveform support (e.g. "triangle+pulse", "sawtooth+noise")
+      const waves = voice.wave.split("+");
+      for (let wi = 0; wi < waves.length; wi++) {
+        let wOut = 0;
+        switch (waves[wi]) {
+          case "triangle":
+            wOut = (voice.phase < 0.5) ? (4.0 * voice.phase - 1.0) : (3.0 - 4.0 * voice.phase);
+            break;
+          case "sawtooth":
+            wOut = 2.0 * voice.phase - 1.0;
+            break;
+          case "pulse":
+            const duty = voice.pw / 4096.0;
+            wOut = (voice.phase < duty) ? 1.0 : -1.0;
+            break;
+          case "noise":
+            const phaseInt = Math.floor(voice.phase * 16777216);
+            const bit19 = (phaseInt >> 19) & 1;
+            if (bit19 !== voice.prevBit19) {
+              voice.prevBit19 = bit19;
+              const bit = ((voice.lfsr >> 22) ^ (voice.lfsr >> 17)) & 1;
+              voice.lfsr = ((voice.lfsr << 1) | bit) & 0x7FFFFF;
+            }
+            wOut = ((voice.lfsr & 0xFF) / 127.5) - 1.0;
+            break;
+        }
+        out += wOut;
       }
+      // Normalize when combining waveforms (SID style)
+      if (waves.length > 1) out = Math.tanh(out);
       
-      if (voice.ringMod && voice.wave === "triangle") {
+      if (voice.ringMod && voice.wave.includes("triangle")) {
         const prevIdx = (v + 2) % 3;
         const prevVoice = this.voices[prevIdx];
         const prevSign = (prevVoice.phase < 0.5) ? 1.0 : -1.0;
