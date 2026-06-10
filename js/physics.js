@@ -49,6 +49,10 @@ export function loadLevel(levelData) {
 
   buildCollisionGrid();
   bakeTerrain();
+
+  // Teleport-in burst at the spawn point
+  spawnSparks(state.ship.x, state.ship.y, "#7CFC00", 14);
+  spawnShockwave(state.ship.x, state.ship.y, "#7CFC00");
 }
 
 export function buildCollisionGrid() {
@@ -651,9 +655,21 @@ function updateProjectiles(dt) {
     const nextX = p.x + p.vx;
     const nextY = p.y + p.vy;
 
+    // Glowing trail embers behind every bullet
+    if (Math.random() < 0.55) {
+      const trailLife = 0.12 + Math.random() * 0.1;
+      state.particles.push({
+        x: p.x, y: p.y,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        color: p.enemy ? "#ff6644" : "#aaffff",
+        life: trailLife, maxLife: trailLife, size: 0.7
+      });
+    }
+
     const hitTerrain = checkRaycastTerrain({ x: p.x, y: p.y }, { x: nextX, y: nextY });
     if (hitTerrain) {
-      spawnSparks(hitTerrain.x, hitTerrain.y, "#ffffff", 5);
+      spawnSparks(hitTerrain.x, hitTerrain.y, p.enemy ? "#ff8866" : "#ffffff", 10);
       playSFX("projectileHit");
       state.projectiles.splice(i, 1);
       continue;
@@ -696,14 +712,16 @@ function updateProjectiles(dt) {
               if (other.type === "door" && other.trigger === linkId) {
                 other.active = !other.active;
                 playSFX("doorHiss");
+                spawnSparks(other.x + (other.w || 8) / 2, other.y + (other.h || 80) / 2, "#ff5555", 14);
               }
             }
+            spawnShockwave(ent.x, ent.y, "#00ffff");
             playSFX("select");
             showNotification("TÜR SCHALTUNG");
           }
           else if (ent.health <= 0) {
             ent.active = false;
-            spawnExplosionParticles(ent.x, ent.y, 10);
+            spawnExplosionParticles(ent.x, ent.y, 24);
             spawnDebris(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500", 6, 0, 0);
             spawnShockwave(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500");
             if (ent.type === "turret") {
@@ -799,7 +817,17 @@ function updateEntities(dt) {
       }
 
       if (Math.random() < 0.15) playSFX("fuelCollected");
-      spawnSparks(target.x, target.y - 4, "#7CFC00", 1);
+      spawnSparks(target.x, target.y - 4, "#7CFC00", 3);
+      // Energy streaks flying from depot to ship
+      if (Math.random() < 0.5) {
+        const streakLife = 0.25;
+        state.particles.push({
+          x: target.x, y: target.y - 4,
+          vx: (state.ship.x - target.x) * 0.045,
+          vy: (state.ship.y - target.y) * 0.045,
+          color: "#bfff80", life: streakLife, maxLife: streakLife, size: 1.1
+        });
+      }
     } 
     else if (target === state.pod && !state.pod.attached) {
       suckingActive = true;
@@ -813,6 +841,8 @@ function updateEntities(dt) {
       if (dist < 29) {
         state.pod.attached = true;
         playSFX("podAttach");
+        spawnSparks(state.pod.x, state.pod.y, "#00ffff", 12);
+        spawnShockwave(state.pod.x, state.pod.y, "#00ffff");
         showNotification("PENDEL GEKOPPELT!");
         state.ship.tractorTarget = null;
       }
@@ -838,10 +868,11 @@ function updateEntities(dt) {
           ent.angle += diff * 0.085;
 
           ent.bulletTimer += dt;
-          if (ent.bulletTimer > 1.4) {
+          if (ent.bulletTimer > 1.15) {
             ent.bulletTimer = 0;
-            
-            const shootSpeed = 1.95;
+            spawnSparks(ent.x + Math.cos(ent.angle) * 11, ent.y - 2 + Math.sin(ent.angle) * 11, "#ff8866", 4);
+
+            const shootSpeed = 2.2;
             state.projectiles.push({
               x: ent.x + Math.cos(ent.angle) * 9,
               y: ent.y + Math.sin(ent.angle) * 9,
@@ -857,13 +888,17 @@ function updateEntities(dt) {
     }
   }
 
-  // exit win condition
-  if (state.ship.alive && state.ship.y < state.activeLevel.exitY) {
+  // exit win condition — inverted-gravity levels escape DOWNWARD past exitY
+  const inv = !!state.activeLevel.invertedGravity;
+  const escaped = inv
+    ? state.ship.y > state.activeLevel.exitY
+    : state.ship.y < state.activeLevel.exitY;
+  if (state.ship.alive && escaped) {
     if (state.pod.attached || state.activeLevel.polygons.length === 0) {
       triggerLevelComplete();
     } else {
       showNotification("RETTE ERST DAS PENDEL!");
-      state.ship.y = state.activeLevel.exitY + 4;
+      state.ship.y = state.activeLevel.exitY + (inv ? -4 : 4);
     }
   }
 }
@@ -880,13 +915,10 @@ function triggerLevelComplete() {
   
   setTimeout(() => {
     state.activeCampaignIdx = (state.activeCampaignIdx + 1) % CAMPAIGN.length;
-    // Clone so we never mutate the campaign preset itself
-    const loadedPreset = JSON.parse(JSON.stringify(CAMPAIGN[state.activeCampaignIdx]));
     if (state.activeCampaignIdx === 0) {
-      loadedPreset.invertedGravity = true;
-      showNotification("SCHWERKRAFT INVERTIERT!");
+      showNotification("KAMPAGNE GESCHAFFT! NEUE RUNDE");
     }
-    loadLevel(loadedPreset);
+    loadLevel(CAMPAIGN[state.activeCampaignIdx]);
     state.gameState = STATE_PLAYING;
   }, 3500);
 }

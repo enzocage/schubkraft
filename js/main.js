@@ -53,13 +53,15 @@ const ctx = canvas.getContext("2d");
 // 1. INITIALIZATION
 // ==========================================
 
-// Initialize stars background layers
-for (let i = 0; i < 48; i++) {
+// Initialize pseudo-3D starfield: z = depth (0 far .. 1 near).
+// Near stars are bigger glowing discs that parallax faster.
+for (let i = 0; i < 72; i++) {
+  const z = Math.pow(Math.random(), 1.6); // bias toward far stars
   state.stars.push({
     x: Math.random() * 320,
     y: Math.random() * 200,
-    speed: Math.random() * 0.12 + 0.03,
-    size: Math.random() * 0.6 + 0.2
+    z: z,
+    twinkle: Math.random() * Math.PI * 2
   });
 }
 
@@ -131,6 +133,9 @@ function updateVisualEffects(dt) {
   if (state.textPromptTimer > 0) {
     state.textPromptTimer = Math.max(0, state.textPromptTimer - dt);
   }
+  if (state.transitionTimer > 0) {
+    state.transitionTimer = Math.max(0, state.transitionTimer - dt);
+  }
 
   // Parallax moon rotation drift
   state.rotateMoon += dt * 0.04;
@@ -176,9 +181,39 @@ function updateVisualEffects(dt) {
     }
   }
 
+  // Reactor overload: continuous embers + smoke pouring off the core
+  if (state.reactorTimer > 0 && state.gameState === STATE_PLAYING) {
+    const reactor = state.entities.find(e => e.type === "reactor");
+    if (reactor && Math.random() < 0.7) {
+      const a = Math.random() * Math.PI * 2;
+      const emberLife = Math.random() * 0.7 + 0.3;
+      state.particles.push({
+        x: reactor.x + Math.cos(a) * 10,
+        y: reactor.y + Math.sin(a) * 10,
+        vx: Math.cos(a) * (0.4 + Math.random() * 0.8),
+        vy: Math.sin(a) * (0.4 + Math.random() * 0.8) - 0.6,
+        color: Math.random() < 0.5 ? "#ff5500" : "#ffaa00",
+        life: emberLife, maxLife: emberLife,
+        size: Math.random() * 1.2 + 0.5
+      });
+    }
+  }
+
   // Spawning continuous orange thruster rocket sparks
   if (state.keys.thrust && state.ship.fuel > 0 && state.ship.alive && state.gameState === STATE_PLAYING) {
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.4) {
+      // Drifting gray exhaust smoke
+      const smokeLife = Math.random() * 0.8 + 0.4;
+      state.particles.push({
+        x: state.ship.x - Math.cos(state.ship.angle) * 6,
+        y: state.ship.y - Math.sin(state.ship.angle) * 6,
+        vx: -Math.cos(state.ship.angle) * 0.3 + (Math.random() - 0.5) * 0.3,
+        vy: -Math.sin(state.ship.angle) * 0.3 + (Math.random() - 0.5) * 0.3 - 0.1,
+        color: "rgba(160,160,170,0.5)",
+        life: smokeLife, maxLife: smokeLife, size: 1.4
+      });
+    }
+    if (Math.random() < 0.85) {
       const nozzleX = state.ship.x - Math.cos(state.ship.angle) * 4;
       const nozzleY = state.ship.y - Math.sin(state.ship.angle) * 4;
       const angleSpread = state.ship.angle + Math.PI + (Math.random() - 0.5) * 0.5;

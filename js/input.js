@@ -1,28 +1,29 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js';
 import { initAudio, resumeAudioContext, playSFX } from './audio.js';
-import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords } from './physics.js';
+import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js';
 import { toggleEditor, triggerEditorUndo, saveEditorUndoState, populateEntityProperties, handleEditorClick } from './editor.js';
 
 export function fireLaserBullet() {
   const now = Date.now();
-  if (now - state.lastFireTime < 180) return;
+  if (now - state.lastFireTime < 110) return;
   state.lastFireTime = now;
 
-  const bulletSpeed = 3.65;
+  const bulletSpeed = 4.2;
   const bx = state.ship.x + Math.cos(state.ship.angle) * 7;
   const by = state.ship.y + Math.sin(state.ship.angle) * 7;
-  
+
   state.projectiles.push({
     x: bx,
     y: by,
-    vx: Math.cos(state.ship.angle) * bulletSpeed,
-    vy: Math.sin(state.ship.angle) * bulletSpeed,
+    vx: Math.cos(state.ship.angle) * bulletSpeed + state.ship.vx * 0.4,
+    vy: Math.sin(state.ship.angle) * bulletSpeed + state.ship.vy * 0.4,
     enemy: false,
     life: 1.8
   });
 
+  spawnSparks(bx, by, "#aaffff", 4); // muzzle flash sparks
   playSFX("pew");
-  state.screenShake = Math.max(state.screenShake, 1.8);
+  state.screenShake = Math.max(state.screenShake, 2.2);
 }
 
 export function bindInputEvents(canvas) {

@@ -84,34 +84,45 @@ export function renderGame(canvas, ctx) {
   const viewL = camX - 160;
   const viewT = camY - 100;
 
-  // 1. Draw Starfield with Parallax wrapping (Three speed layers)
-  ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+  // 1. Pseudo-3D parallax starfield: depth-scaled glowing circles.
+  // Far stars: tiny dim dots. Near stars: bright discs with soft halos.
+  const starTime = Date.now();
   for (let i = 0; i < state.stars.length; i++) {
     const star = state.stars[i];
-    
-    // speed layers: i % 3 === 0 (slow), 1 (medium), 2 (fast)
-    let speed = star.speed;
-    let color = "rgba(255, 255, 255, 0.45)";
-    if (i % 3 === 0) {
-      speed = star.speed * 0.25;
-      color = "rgba(100, 100, 120, 0.3)";
-    } else if (i % 3 === 1) {
-      speed = star.speed * 0.6;
-      color = "rgba(124, 252, 0, 0.35)"; // green tint
-    }
-    
-    // Twinkle: per-star sinusoidal brightness modulation
-    const twinkle = 0.55 + 0.45 * Math.sin(Date.now() * 0.002 * (1 + (i % 7) * 0.35) + i * 1.7);
-    ctx.globalAlpha = twinkle;
-    ctx.strokeStyle = color;
+    const z = star.z;
+    const speed = 0.04 + z * 0.22;             // nearer = faster parallax
+    const radius = 0.25 + z * 1.15;            // nearer = bigger disc
+    const twinkle = 0.5 + 0.5 * Math.sin(starTime * 0.002 * (1 + z * 2) + star.twinkle);
+
     const sx = ((star.x - camX * speed) % 320 + 320) % 320;
     const sy = ((star.y - camY * speed) % 200 + 200) % 200;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + 0.6, sy);
-    ctx.stroke();
+
+    if (z > 0.62) {
+      // Near layer: glowing white disc with soft halo
+      const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius * 3.2);
+      halo.addColorStop(0, `rgba(255,255,255,${0.5 * twinkle})`);
+      halo.addColorStop(0.4, `rgba(180,220,255,${0.18 * twinkle})`);
+      halo.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius * 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(255,255,255,${0.55 + 0.45 * twinkle})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (z > 0.3) {
+      // Mid layer: small green-tinted discs
+      ctx.fillStyle = `rgba(150,255,120,${0.25 + 0.3 * twinkle})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Far layer: dim blue-gray pixels
+      ctx.fillStyle = `rgba(110,115,145,${0.18 + 0.2 * twinkle})`;
+      ctx.fillRect(sx, sy, 0.7, 0.7);
+    }
   }
-  ctx.globalAlpha = 1;
 
   // 2. Draw rotating wireframe moon background
   drawWireframePlanet(ctx, 160 - (camX * 0.05) % 320, 100 - (camY * 0.05) % 200, 48, state.rotateMoon, "rgba(124, 252, 0, 0.09)");
@@ -504,29 +515,51 @@ export function renderGame(canvas, ctx) {
     ctx.stroke();
   }
 
-  // 8. Projectiles — bright core + faded longer trail; enemy shots are red
-  ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+  // 8. Projectiles — fat glowing plasma bolts: halo + streak + hot head
   for (const p of state.projectiles) {
     const col = p.enemy ? "#ff4444" : "#ffffff";
+    const glowCol = p.enemy ? "rgba(255,80,60," : "rgba(160,255,255,";
+    const headR = p.enemy ? 1.6 : 1.3;
     if (state.useBloom) ctx.shadowColor = col;
 
-    // Faded trail
+    // Soft plasma halo around the head
+    ctx.save();
+    ctx.shadowBlur = 0;
+    const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, headR * 3);
+    halo.addColorStop(0, glowCol + "0.5)");
+    halo.addColorStop(1, glowCol + "0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, headR * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Long faded trail
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.strokeStyle = col;
+    ctx.lineWidth = (1.4 * dpr) / Math.min(scaleX, scaleY);
     ctx.beginPath();
-    ctx.moveTo(p.x - p.vx * 0.9, p.y - p.vy * 0.9);
-    ctx.lineTo(p.x - p.vx * 2.4, p.y - p.vy * 2.4);
+    ctx.moveTo(p.x - p.vx * 0.8, p.y - p.vy * 0.8);
+    ctx.lineTo(p.x - p.vx * 2.8, p.y - p.vy * 2.8);
     ctx.stroke();
     ctx.restore();
 
-    // Hot core
+    // Hot streak
     ctx.strokeStyle = col;
+    ctx.lineWidth = (2.0 * dpr) / Math.min(scaleX, scaleY);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x - p.vx * 0.9, p.y - p.vy * 0.9);
+    ctx.lineTo(p.x - p.vx * 0.8, p.y - p.vy * 0.8);
     ctx.stroke();
+
+    // Bright bolt head
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, headR * 0.7, 0, Math.PI * 2);
+    ctx.fill();
   }
+  ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
 
   ctx.shadowBlur = 0; // Disable shadow glow
 
@@ -630,6 +663,41 @@ export function renderGame(canvas, ctx) {
     ctx.fillStyle = "rgba(0,0,0,0.8)";
     ctx.fillRect(startX - 6, 128, textLen * 6 + 12, 14);
     drawVectorText(ctx, state.textPromptMessage, startX, 131, 0.35, "#ffffff");
+    ctx.restore();
+  }
+
+  // Screen transition: trash-static / dust splash burst on EVERY state change
+  if (state.gameState !== state.lastGameState) {
+    state.lastGameState = state.gameState;
+    state.transitionTimer = 0.45;
+  }
+  if (state.transitionTimer > 0) {
+    const ta = state.transitionTimer / 0.45;
+    ctx.save();
+
+    // Heavy static trash
+    for (let i = 0; i < 220 * ta; i++) {
+      ctx.fillStyle = `rgba(255,255,255,${(Math.random() * 0.5 * ta).toFixed(3)})`;
+      ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 7, 1 + Math.random() * 1.5);
+    }
+    // Horizontal tear lines (VHS-style)
+    for (let i = 0; i < 7 * ta; i++) {
+      const ty2 = Math.random() * 200;
+      ctx.fillStyle = `rgba(${Math.random() < 0.5 ? '124,252,0' : '255,255,255'},${0.12 + Math.random() * 0.25 * ta})`;
+      ctx.fillRect(0, ty2, 320, 1 + Math.random() * 2);
+    }
+    // One bright rolling band
+    const bandY = ((1 - ta) * 260) - 30;
+    ctx.fillStyle = `rgba(255,255,255,${0.08 * ta})`;
+    ctx.fillRect(0, bandY, 320, 24);
+    // Dust splash: drifting motes
+    for (let i = 0; i < 26 * ta; i++) {
+      const dr = Math.random() * 1.8 + 0.3;
+      ctx.fillStyle = `rgba(200,200,210,${(Math.random() * 0.4 * ta).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * 320, Math.random() * 200, dr, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 

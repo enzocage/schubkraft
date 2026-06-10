@@ -488,6 +488,90 @@ function midiToTrackerSong(midiData) {
 }
 
 // ============================================================================
+// HUBBARD_SONG — Rob Hubbard style title theme
+// Driving galloping bass with octave jumps, fast 0x37/0x47 arpeggio chords,
+// expressive vibrato lead with slides, and a punchy noise drum track.
+// ============================================================================
+function rows(...r) { return [].concat(...r); }
+// 8-row gallop bass motif on a root note (classic Hubbard pulse)
+function gallop(root2, root3) {
+  return [
+    [root2, "hbass"], ["---"], [root3, "hbass"], [root2, "hbass"],
+    ["---"], [root2, "hbass"], [root3, "hbass"], ["---"]
+  ];
+}
+// 8-row drum motif: kick / snare backbeat with ghost kick
+function beat() {
+  return [
+    ["C-2", "hkick"], ["---"], ["C-5", "hsnare"], ["---"],
+    ["C-2", "hkick"], ["C-2", "hkick"], ["C-5", "hsnare"], ["---"]
+  ];
+}
+
+const HUBBARD_SONG = {
+  title: "THRUST — HUBBARD STYLE",
+  speed: 5,
+  instruments: {
+    hbass: {
+      wave: "sawtooth+pulse", adsr: [0, 5, 8, 3],
+      pw: { start: 1700, speed: 40, min: 1100, max: 2900 },
+      filter: { mode: "lp", cutoff: 0.32, res: 3 }
+    },
+    hlead: {
+      wave: "pulse", adsr: [0, 6, 9, 4],
+      pw: { start: 1100, speed: 70, min: 700, max: 3400 },
+      vibrato: { speed: 0.16, depth: 7 }
+    },
+    harp: {
+      wave: "pulse", adsr: [0, 3, 7, 2],
+      pw: { start: 2048, speed: 120, min: 900, max: 3300 }
+    },
+    hkick: { wave: "noise", adsr: [0, 4, 0, 1], filter: { mode: "lp", cutoff: 0.25, res: 4 } },
+    hsnare: { wave: "noise", adsr: [0, 5, 0, 3], filter: { mode: "hp", cutoff: 0.28, res: 5 } }
+  },
+  patterns: {
+    // Am | Am | F | G
+    bass0: rows(gallop("A-2", "A-3"), gallop("A-2", "A-3"), gallop("F-2", "F-3"), gallop("G-2", "G-3")),
+    // Am | Am | D | E
+    bass1: rows(gallop("A-2", "A-3"), gallop("A-2", "A-3"), gallop("D-2", "D-3"), gallop("E-2", "E-3")),
+
+    lead0: [
+      ["A-4", "harp", "arp", 0x37], ["---"], ["C-5", "hlead"], ["---"],
+      ["E-5", "hlead"], ["---"], ["A-5", "harp", "arp", 0x37], ["---"],
+      ["G-5", "hlead"], ["---"], ["E-5", "hlead"], ["---"],
+      ["C-5", "harp", "arp", 0x47], ["---"], ["D-5", "hlead"], ["---"],
+      ["F-5", "harp", "arp", 0x37], ["---"], ["E-5", "hlead"], ["---"],
+      ["C-5", "hlead"], ["---"], ["A-4", "harp", "arp", 0x37], ["---"],
+      ["B-4", "hlead"], ["---"], ["D-5", "hlead", "slide", 2], ["---"],
+      ["E-5", "harp", "arp", 0x47], ["---"], ["---"], ["---"]
+    ],
+    lead1: [
+      ["A-5", "harp", "arp", 0x47], ["---"], ["G-5", "hlead"], ["---"],
+      ["E-5", "hlead"], ["---"], ["C-5", "harp", "arp", 0x37], ["---"],
+      ["D-5", "hlead", "slide", 2], ["---"], ["E-5", "hlead"], ["---"],
+      ["F-5", "harp", "arp", 0x37], ["---"], ["G-5", "hlead"], ["---"],
+      ["A-5", "hlead"], ["---"], ["E-5", "harp", "arp", 0x47], ["---"],
+      ["C-5", "hlead"], ["---"], ["B-4", "hlead"], ["---"],
+      ["G#4", "harp", "arp", 0x47], ["---"], ["B-4", "hlead"], ["---"],
+      ["A-4", "harp", "arp", 0x37], ["---"], ["---"], ["---"]
+    ],
+
+    drums0: rows(beat(), beat(), beat(), beat()),
+    // Fill: snare roll into the loop point
+    drums1: rows(beat(), beat(), beat(), [
+      ["C-2", "hkick"], ["---"], ["C-5", "hsnare"], ["C-5", "hsnare"],
+      ["C-5", "hsnare"], ["C-5", "hsnare"], ["C-5", "hsnare"], ["C-5", "hsnare"]
+    ])
+  },
+  orderlist: {
+    v1: ["bass0", "bass0", "bass1", "bass0"],
+    v2: ["lead0", "lead1", "lead0", "lead1"],
+    v3: ["drums0", "drums0", "drums0", "drums1"]
+  },
+  loop: 0
+};
+
+// ============================================================================
 // Fallback tracker song (used if MIDI fails to load)
 // ============================================================================
 const FALLBACK_SONG = {
@@ -571,21 +655,8 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Try fetching & parsing MIDI for title music
-  try {
-    const response = await fetch('debussy-clair-de-lune.mid');
-    if (response.ok) {
-      const buffer = await response.arrayBuffer();
-      const midiData = parseMidi(new Uint8Array(buffer));
-      TRACKER_SONG = midiToTrackerSong(midiData);
-      if (!TRACKER_SONG) TRACKER_SONG = FALLBACK_SONG;
-    } else {
-      TRACKER_SONG = FALLBACK_SONG;
-    }
-  } catch (err) {
-    console.warn("MIDI fetch failed, using fallback music:", err.message);
-    TRACKER_SONG = FALLBACK_SONG;
-  }
+  // 3. Title music: Rob Hubbard style SID theme
+  TRACKER_SONG = HUBBARD_SONG;
 
   forge.loadSong(TRACKER_SONG);
   sid = forge; // publish only when fully ready
