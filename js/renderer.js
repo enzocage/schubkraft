@@ -1,6 +1,12 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, STATE_EDITOR, STATE_HIGHSCORE, THEMES, TITLE_MENU_ITEMS } from './constants.js';
 import { drawVectorChar, drawVectorText } from './vectorFont.js';
 
+// Organic animation — Baba Is You style variant cycling every 200ms
+let animTick = 0;
+export function tickAnimation() { animTick++; }
+function variant() { return Math.floor(animTick / 12) % 5; }
+function vJitter(amount) { return (variant() - 2) * amount; }
+
 export function drawWireframePlanet(ctx, cx, cy, radius, rotation, color) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 0.5;
@@ -31,6 +37,7 @@ export function drawWireframePlanet(ctx, cx, cy, radius, rotation, color) {
 }
 
 export function renderGame(canvas, ctx) {
+  tickAnimation();
   const dpr = window.devicePixelRatio || 1;
   const scaleX = canvas.width / 320;
   const scaleY = canvas.height / 200;
@@ -143,13 +150,13 @@ export function renderGame(canvas, ctx) {
 
     if (ent.type === "turret") {
       ctx.beginPath();
-      ctx.arc(ent.x, ent.y, 7, Math.PI, 0);
+      ctx.arc(ent.x + vJitter(0.8), ent.y + vJitter(0.8), 7 + vJitter(1), Math.PI, 0);
       ctx.stroke();
       
       const angle = ent.angle !== undefined ? ent.angle : (ent.dir === -1 ? Math.PI : 0);
       ctx.beginPath();
-      ctx.moveTo(ent.x, ent.y - 2);
-      ctx.lineTo(ent.x + Math.cos(angle) * 11, ent.y - 2 + Math.sin(angle) * 11);
+      ctx.moveTo(ent.x + vJitter(0.6), ent.y - 2 + vJitter(0.6));
+      ctx.lineTo(ent.x + Math.cos(angle) * (11 + vJitter(1.5)), ent.y - 2 + Math.sin(angle) * (11 + vJitter(1.5)));
       ctx.stroke();
 
       ctx.save();
@@ -163,7 +170,7 @@ export function renderGame(canvas, ctx) {
       ctx.restore();
     } 
     else if (ent.type === "fuel") {
-      ctx.strokeRect(ent.x - 9, ent.y - 8, 18, 16);
+      ctx.strokeRect(ent.x - 9 + vJitter(1), ent.y - 8 + vJitter(1), 18 + vJitter(2), 16 + vJitter(2));
       ctx.save();
       ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
       drawVectorText(ctx, "FUEL", ent.x - 8, ent.y - 3, 0.22, objColor);
@@ -182,14 +189,14 @@ export function renderGame(canvas, ctx) {
       ctx.fill();
       ctx.restore();
 
-      ctx.strokeRect(ent.x - 12, ent.y - 12, 24, 24);
+      ctx.strokeRect(ent.x - 12 + vJitter(1.2), ent.y - 12 + vJitter(1.2), 24 + vJitter(2), 24 + vJitter(2));
       const pulse = 4 + Math.sin(Date.now() * 0.015) * 2;
       ctx.strokeRect(ent.x - pulse, ent.y - pulse, pulse * 2, pulse * 2);
     }
     else if (ent.type === "door") {
       ctx.strokeStyle = "#ff2222";
       if (state.useBloom) ctx.shadowColor = "#ff2222";
-      ctx.strokeRect(ent.x, ent.y, ent.w || 8, ent.h || 80);
+      ctx.strokeRect(ent.x + vJitter(0.8), ent.y + vJitter(0.8), (ent.w || 8) + vJitter(1), (ent.h || 80) + vJitter(1.5));
       ctx.save();
       ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
       for (let dy = ent.y + 10; dy < ent.y + (ent.h || 80); dy += 15) {
@@ -203,7 +210,7 @@ export function renderGame(canvas, ctx) {
     else if (ent.type === "switch") {
       ctx.strokeStyle = "#00ffff";
       if (state.useBloom) ctx.shadowColor = "#00ffff";
-      ctx.strokeRect(ent.x - 5, ent.y - 5, 10, 10);
+      ctx.strokeRect(ent.x - 5 + vJitter(0.7), ent.y - 5 + vJitter(0.7), 10 + vJitter(1.5), 10 + vJitter(1.5));
       ctx.beginPath();
       ctx.moveTo(ent.x, ent.y);
       ctx.lineTo(ent.x + 4, ent.y - 6);
@@ -216,18 +223,18 @@ export function renderGame(canvas, ctx) {
     ctx.strokeStyle = objColor;
     if (state.useBloom) ctx.shadowColor = objColor;
     ctx.beginPath();
-    ctx.arc(state.pod.x, state.pod.y, 5, 0, Math.PI * 2);
+    ctx.arc(state.pod.x + vJitter(1), state.pod.y + vJitter(1), 5 + vJitter(0.8), 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(state.pod.x, state.pod.y, 2, 0, Math.PI * 2);
+    ctx.arc(state.pod.x + vJitter(1), state.pod.y + vJitter(1), 2 + vJitter(0.5), 0, Math.PI * 2);
     ctx.stroke();
   }
 
   // 6. Draw Spaceship
   if (state.ship.alive) {
     ctx.save();
-    ctx.translate(state.ship.x, state.ship.y);
+    ctx.translate(state.ship.x + vJitter(1.5), state.ship.y + vJitter(1.5));
     ctx.rotate(state.ship.visualAngle);
     
     ctx.strokeStyle = objColor;
@@ -412,6 +419,15 @@ export function renderGame(canvas, ctx) {
     drawVectorText(ctx, state.textPromptMessage, startX, 131, 0.35, "#ffffff");
     ctx.restore();
   }
+
+  // CRT static noise overlay
+  ctx.save();
+  const crtAlpha = 0.03 + Math.random() * 0.02;
+  for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = gba(255,255,255,);
+    ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 3, 1);
+  }
+  ctx.restore();
 
   ctx.restore();
 }
@@ -618,5 +634,14 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
   let modeText = `MODUS: ${state.editorMode.toUpperCase()}`;
   if (state.editorMode === "entity") modeText += ` (${state.selectedEntityPreset.toUpperCase()})`;
   drawVectorText(ctx, modeText, state.editorCam.x - 150, state.editorCam.y - 92, 0.25, "#ffffff");
+  // CRT static noise overlay
+  ctx.save();
+  const crtAlpha = 0.03 + Math.random() * 0.02;
+  for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = gba(255,255,255,);
+    ctx.fillRect(Math.random() * 320, Math.random() * 200, 1 + Math.random() * 3, 1);
+  }
+  ctx.restore();
+
   ctx.restore();
 }

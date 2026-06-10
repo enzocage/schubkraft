@@ -33,7 +33,8 @@ import {
 } from './input.js';
 
 import {
-  renderGame
+  renderGame,
+  tickAnimation
 } from './renderer.js';
 
 import {
