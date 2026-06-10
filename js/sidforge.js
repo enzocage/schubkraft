@@ -112,6 +112,11 @@ class SidCoreProcessor extends AudioWorkletProcessor {
         if (voice) {
           voice[msg.reg] = msg.val;
         }
+        const activeSfx = this.sfxActive[msg.voice];
+        if (activeSfx) {
+          if (msg.reg === "freq") activeSfx.currentFreq = msg.val;
+          if (msg.reg === "gate") activeSfx.gate = msg.val;
+        }
         break;
     }
   }
@@ -240,7 +245,7 @@ class SidCoreProcessor extends AudioWorkletProcessor {
       const sfx = this.sfxActive[v];
       if (sfx) {
         sfx.age++;
-        if (sfx.age >= sfx.duration) {
+        if (sfx.age >= sfx.duration || (sfx.gate === false && this.voices[v].envState === 0)) {
           this.sfxActive[v] = null;
           this.voiceAlloc[v] = "music";
           this.voices[v].gate = false;
