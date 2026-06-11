@@ -122,8 +122,7 @@ export function bakeTerrain() {
   state.bakedTerrainCanvas.height = maxH;
   const offCtx = state.bakedTerrainCanvas.getContext("2d");
 
-  offCtx.fillStyle = themePreset.bg;
-  offCtx.fillRect(0, 0, maxW, maxH);
+  offCtx.clearRect(0, 0, maxW, maxH);
 
   const tracePoly = (c, poly) => {
     c.beginPath();
@@ -153,9 +152,9 @@ export function bakeTerrain() {
       tracePoly(offCtx, poly);
       offCtx.clip();
 
-      offCtx.lineWidth = 1;
-      const step = themePreset.hatch === 3 ? 3 : 2;
-      const bandHeight = 14; // px per palette entry → slow vertical color roll
+      offCtx.lineWidth = 1.2;
+      const step = themePreset.hatch >= 4 ? 2 : (themePreset.hatch === 3 ? 3 : 3);
+      const bandHeight = 10; // px per palette entry → slow vertical color roll
       for (let y = 0; y < maxH; y += step) {
         // Blend smoothly between adjacent raster band colors
         const bandPos = (y / bandHeight) % raster.length;
@@ -190,9 +189,8 @@ export function bakeTerrain() {
     }
   }
 
-  // Baked soft neon glow: stroke the contour twice with heavy shadow blur,
-  // then once more as a wide dim halo line beneath the bright edge
-  for (const pass of [{ blur: 9, width: 2.6, alpha: 0.55 }, { blur: 4, width: 1.6, alpha: 0.9 }]) {
+  // Baked soft neon glow: stroke the contour with heavy shadow blur for massive look
+  for (const pass of [{ blur: 14, width: 3.2, alpha: 0.65 }, { blur: 6, width: 2.0, alpha: 0.85 }]) {
     offCtx.save();
     offCtx.shadowBlur = pass.blur;
     offCtx.shadowColor = themePreset.edge || themePreset.terrain;

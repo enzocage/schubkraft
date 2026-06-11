@@ -56,7 +56,7 @@ const ctx = canvas.getContext("2d");
 
 // Initialize pseudo-3D starfield: z = depth (0 far .. 1 near).
 // Near stars are bigger glowing discs that parallax faster.
-for (let i = 0; i < 72; i++) {
+for (let i = 0; i < 180; i++) {
   const z = Math.pow(Math.random(), 1.6); // bias toward far stars
   state.stars.push({
     x: Math.random() * 320,

@@ -7,19 +7,19 @@ export const STATE_HIGHSCORE = "HIGHSCORE";
 
 export const THEMES = {
   c64: {
-    terrain: "#8B4A52", hatch: 3, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
-    edge: "#ff96a4",
-    raster: ["#3a1d22", "#5a2e35", "#8B4A52", "#b35f6b", "#d98a94", "#b35f6b", "#8B4A52", "#5a2e35"]
+    terrain: "#c02840", hatch: 4, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
+    edge: "#ff6090",
+    raster: ["#4a1020", "#7a1a30", "#c02840", "#e84060", "#ff7090", "#e84060", "#c02840", "#7a1a30"]
   },
   inverted: {
-    terrain: "#3CB043", hatch: 2, objects: "#FFFFFF", hud: "#FFFFFF", bg: "#000000", filled: true, fillColor: "#3CB043",
-    edge: "#a6ffae",
-    raster: ["#16451a", "#1f6326", "#2e8a35", "#3CB043", "#5ed967", "#3CB043", "#2e8a35", "#1f6326"]
+    terrain: "#20d050", hatch: 3, objects: "#FFFFFF", hud: "#FFFFFF", bg: "#000000", filled: true, fillColor: "#20d050",
+    edge: "#80ffa0",
+    raster: ["#0a3010", "#105a1a", "#20d050", "#40e070", "#80ffa0", "#40e070", "#20d050", "#105a1a"]
   },
   bbc: {
-    terrain: "#E03020", hatch: 0, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
-    edge: "#ff8a70",
-    raster: ["#4a100a", "#7a1c10", "#a82618", "#E03020", "#ff6a4a", "#E03020", "#a82618", "#7a1c10"]
+    terrain: "#ff4020", hatch: 2, objects: "#7CFC00", hud: "#7CFC00", bg: "#000000", filled: false,
+    edge: "#ff9070",
+    raster: ["#3a0a00", "#7a1a08", "#c03018", "#ff4020", "#ff8060", "#ff4020", "#c03018", "#7a1a08"]
   }
 };
 
