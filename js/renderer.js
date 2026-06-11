@@ -1032,7 +1032,7 @@ export function renderTitleScreen(ctx) {
   }
 
   drawVectorText(ctx, "W A S D + SHIFT + SPACE", 70, 178, 0.28, "#555");
-  drawVectorText(ctx, "code & music by felix schmidt", 66, 188, 0.25, "#333");
+  drawVectorText(ctx, "code and music by felix schmidt", 62, 188, 0.25, "#333");
 }
 
 export function renderGameOverScreen(ctx) {
