@@ -1,5 +1,7 @@
 # THRUST — Retro C64 Clone in HTML5
 
+![Thrust](gfx/Thrust.png)
+
 ![Thrust Arcade Cabinet](gfx/ss.jpg)
 
 Ein hochentwickelter Retro-Klon des Spieleklassikers *Thrust* (Firebird, 1986) in modernem HTML5 — komplett ohne Build-Schritt, ohne Frameworks und ohne externe Abhängigkeiten. Das Spiel läuft mit konstanten 60 FPS, rendert vektorbasierte Visuals mit dynamischem Glow (Bloom) und CRT-Effekten, und erzeugt seine gesamte Musik und alle Soundeffekte zur Laufzeit über eine eigene **SID-Chip-Emulation (MOS 6581)** in einem AudioWorklet.
