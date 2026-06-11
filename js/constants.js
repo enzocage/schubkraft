@@ -340,6 +340,7 @@ export const state = {
   useBloom: true,
   rotateMoon: 0,
   musicEnabled: true,
+  musicVolume: 0.20,
   sfxEnabled: true,
 
   ship: {

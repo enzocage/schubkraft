@@ -16,6 +16,7 @@ let currentDroneVariant = 0;
 // Built at initAudio time
 let SFX_BANK = {};
 let TRACKER_SONG = null;
+let mp3Elem = null;
 
 // ============================================================================
 // Base SFX Templates — Optimized C64 SID Sound Design
@@ -563,7 +564,7 @@ async function doInitAudio() {
     forge = await SidForge.create({ audioCtx });
     forge.loadSfxBank(SFX_BANK);
 
-    const musicVol = state.musicEnabled ? 0.7 : 0.0;
+    const musicVol = state.musicEnabled ? state.musicVolume : 0.0;
     const sfxVol = state.sfxEnabled ? 0.8 : 0.0;
     forge.setVolume(musicVol, sfxVol);
   } catch (err) {
@@ -572,11 +573,10 @@ async function doInitAudio() {
   }
 
   // 3. Title music: try playing Wizball title theme MP3, fall back to metal theme
-  let mp3Elem = null;
   try {
     mp3Elem = new Audio("https://nu.vgmtreasurechest.com/soundtracks/wizball-commodore-64/edccdncx/01_Title%20Screen.mp3");
     mp3Elem.loop = true;
-    mp3Elem.volume = state.musicEnabled ? 0.20 : 0.0;
+    mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
     await mp3Elem.play();
     console.log("MP3 playing: Wizball Title Screen");
   } catch (e) {
@@ -590,6 +590,12 @@ async function doInitAudio() {
   sid = forge; // publish only when fully ready
   const musicLabel = mp3Elem ? "Wizball Title Screen (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
   console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
+}
+
+export function updateMusicVolume() {
+  if (mp3Elem) {
+    mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
+  }
 }
 
 // ============================================================================
@@ -698,8 +704,13 @@ export function updateDroneSound(vx, vy, shipAlive) {
 export function updateSequencer() {
   if (!sid) return;
 
-  const musicVol = state.musicEnabled ? 0.7 : 0.0;
   const sfxVol = state.sfxEnabled ? 0.8 : 0.0;
+  if (mp3Elem) {
+    sid.setVolume(0.0, sfxVol);
+    return; // MP3 handles music, skip SID sequencer
+  }
+
+  const musicVol = state.musicEnabled ? state.musicVolume : 0.0;
   sid.setVolume(musicVol, sfxVol);
 
   if (state.gameState === STATE_TITLE || state.gameState === STATE_HIGHSCORE) {

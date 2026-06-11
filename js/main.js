@@ -17,6 +17,7 @@ import {
   updateDroneSound,
   updateTractorSound,
   updateSequencer,
+  updateMusicVolume,
   playSFX
 } from './audio.js';
 
@@ -344,6 +345,12 @@ document.getElementById("chk-bloom").addEventListener("change", (e) => {
 // Music / sound toggle checkboxes
 document.getElementById("chk-music").addEventListener("change", (e) => {
   state.musicEnabled = e.target.checked;
+  updateMusicVolume();
+});
+
+document.getElementById("vol-music").addEventListener("input", (e) => {
+  state.musicVolume = parseInt(e.target.value) / 100;
+  updateMusicVolume();
 });
 
 document.getElementById("chk-sfx").addEventListener("change", (e) => {
