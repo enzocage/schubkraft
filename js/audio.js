@@ -571,28 +571,34 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Title music: try loading Debussy MIDI, fall back to metal theme
+  // 3. Title music: try loading Driller main theme MP3, fall back to metal theme
+  let mp3Source = null;
   try {
-    const resp = await fetch("debussy-clair-de-lune.mid");
-    if (resp.ok) {
-      const buf = await resp.arrayBuffer();
-      const midiData = parseMidi(new Uint8Array(buf));
-      const trackerSong = midiToTrackerSong(midiData);
-      if (trackerSong) {
-        TRACKER_SONG = trackerSong;
-        console.log("MIDI loaded: Clair de Lune");
-      }
+    const mp3Resp = await fetch("https://fi.zophar.net/soundfiles/commodore-64/driller/01_Main%20Theme.mp3");
+    if (mp3Resp.ok) {
+      const mp3Buf = await mp3Resp.arrayBuffer();
+      const audioCtx = forge.ctx;
+      const audioBuffer = await audioCtx.decodeAudioData(mp3Buf);
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = (state.musicEnabled ? 0.20 : 0.0);
+      gainNode.connect(audioCtx.destination);
+      mp3Source = audioCtx.createBufferSource();
+      mp3Source.buffer = audioBuffer;
+      mp3Source.loop = true;
+      mp3Source.connect(gainNode);
+      mp3Source.start();
+      console.log("MP3 loaded: Driller Main Theme");
     }
   } catch (e) {
-    console.warn("MIDI load failed, using fallback:", e.message);
+    console.warn("MP3 load failed, using fallback:", e.message);
   }
-  if (!TRACKER_SONG) {
+  if (!mp3Source) {
     TRACKER_SONG = FALLBACK_SONG;
+    forge.loadSong(TRACKER_SONG);
   }
-
-  forge.loadSong(TRACKER_SONG);
   sid = forge; // publish only when fully ready
-  console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${TRACKER_SONG.title}"`);
+  const musicLabel = mp3Source ? "Driller Main Theme (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
+  console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
 }
 
 // ============================================================================
