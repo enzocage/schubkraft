@@ -2,8 +2,6 @@
 
 ![Schubkraft](gfx/Schubkraft.png)
 
-![Schubkraft Arcade Cabinet](gfx/ss.jpg)
-
 Ein hochentwickelter Retro-Klon des Spieleklassikers von 1986 (hier umbenannt in *Schubkraft*) in modernem HTML5 — komplett ohne Build-Schritt, ohne Frameworks und ohne externe Abhängigkeiten. Das Spiel läuft mit konstanten 60 FPS, rendert vektorbasierte Visuals mit dynamischem Glow (Bloom) und CRT-Effekten, und erzeugt seine gesamte Musik und alle Soundeffekte zur Laufzeit über eine eigene **SID-Chip-Emulation (MOS 6581)** in einem AudioWorklet.
 
 > **Sofort spielen:** `index.html` über einen lokalen Webserver öffnen — fertig. Keine Installation, kein Kompilieren.
@@ -30,20 +28,25 @@ Ein hochentwickelter Retro-Klon des Spieleklassikers von 1986 (hier umbenannt in
 
 ## Screenshots
 
-### Titelbildschirm
-Vektorschrift, Parallax-Sternenfeld und rotierender Drahtgitter-Mond — alles in Echtzeit auf einem 320×200-Logikraster gerendert:
+Hier sind einige Impressionen aus **SCHUBKRAFT** (Titelbildschirm, Gameplay, Kampagnenauswahl, Level-Editor und Endbildschirme):
 
-![Titelbildschirm](gfx/ss1.jpg)
+![Titelbildschirm](gfx/Screenshot%20(25).png)
+*Titelbildschirm mit Vektorschrift, rotierendem Mond und Sternenfeld*
 
-### Gameplay
-Das Schiff mit aktivem Triebwerk im "Valley of the Giants". Sichtbar: schraffiertes C64-Terrain, Triebwerksflamme mit Partikel-Glow, HUD mit Fuel/Lives/Score und Mini-Radar:
+![Gameplay](gfx/Screenshot%20(26).png)
+*Gameplay in den engen, schraffierten Höhlensystemen*
 
-![Gameplay](gfx/ss2.jpg)
+![Level-Editor](gfx/Screenshot%20(27).png)
+*Der integrierte Level-Editor zum Erstellen eigener Minen*
 
-### Level-Editor
-Der eingebaute Editor im "Emerald Shaft"-Level (Inverted-Theme): Raster-Overlay, weiße Vertex-Handles, eine rote Kraftfeld-Tür und die gestrichelte Verbindungslinie zum auslösenden Schalter (cyan):
+![Kampagnenauswahl](gfx/Screenshot%20(28).png)
+*Die Kampagnenauswahl für alle 18 Levels*
 
-![Level-Editor](gfx/ss3.jpg)
+![Level Complete](gfx/Screenshot%20(29).png)
+*Erfolgreiche Flucht aus der Mine (Level Complete)*
+
+![Game Over](gfx/Screenshot%20(30).png)
+*Game Over-Bildschirm nach dem Verlust aller Leben*
 
 ---
 
