@@ -1,5 +1,5 @@
-import { state, STATE_TITLE, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, STATE_EDITOR, STATE_HIGHSCORE, THEMES, TITLE_MENU_ITEMS } from './constants.js';
-import { drawVectorChar, drawVectorText } from './vectorFont.js';
+import { state, STATE_TITLE, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, STATE_EDITOR, STATE_HIGHSCORE, THEMES, TITLE_MENU_ITEMS } from './constants.js?v=2';
+import { drawVectorChar, drawVectorText } from './vectorFont.js?v=2';
 
 // Organic animation — Baba Is You style variant cycling every 200ms
 let animTick = 0;
@@ -796,6 +796,26 @@ export function renderGame(canvas, ctx) {
     renderHighScoreScreen(ctx);
   }
 
+  if (state.musicTitleTimer > 0) {
+    ctx.save();
+    ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+    const size = 0.55;
+    const text = state.musicTitleMessage;
+    const textLen = text.length;
+    const spacing = size * 10;
+    const startX = 160 - (textLen * spacing) / 2;
+    const startY = 100 - (size * 8) / 2;
+
+    ctx.fillStyle = "rgba(10, 10, 20, 0.85)";
+    ctx.fillRect(startX - 8, startY - 6, textLen * spacing + 16, size * 8 + 12);
+
+    ctx.strokeStyle = "rgba(124, 252, 0, 0.4)";
+    ctx.strokeRect(startX - 8, startY - 6, textLen * spacing + 16, size * 8 + 12);
+
+    drawVectorText(ctx, text, startX, startY, size, "#ffffff");
+    ctx.restore();
+  }
+
   if (state.textPromptTimer > 0) {
     ctx.save();
     ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
@@ -1035,7 +1055,8 @@ export function renderTitleScreen(ctx) {
     drawVectorText(ctx, msg, 70, 154, 0.38, "#ff9900");
   }
 
-  drawVectorText(ctx, "W A S D + SHIFT + SPACE / H: HELP", 64, 178, 0.28, "#555");
+  drawVectorText(ctx, "CONTROLS: WASD/O:SHIELD/K:FIRE + SPACE", 84, 170, 0.24, "#555");
+  drawVectorText(ctx, "PRESS H FOR HELP", 84, 179, 0.28, "#7CFC00");
   drawVectorText(ctx, "coding by felix schmidt 2026", 72, 188, 0.25, "#333");
 }
 

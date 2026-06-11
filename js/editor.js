@@ -1,6 +1,6 @@
-import { state, STATE_EDITOR, STATE_TITLE } from './constants.js';
-import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification } from './physics.js';
-import { playSFX } from './audio.js';
+import { state, STATE_EDITOR, STATE_TITLE } from './constants.js?v=2';
+import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification } from './physics.js?v=2';
+import { playSFX } from './audio.js?v=2';
 
 export function saveEditorUndoState() {
   state.editorHistory.push(JSON.stringify(state.activeLevel));

@@ -1,5 +1,5 @@
-import { state, STATE_PLAYING, STATE_TITLE, STATE_HIGHSCORE, MP3_PLAYLIST } from './constants.js';
-import { SidForge } from './sidforge.js';
+import { state, STATE_PLAYING, STATE_TITLE, STATE_HIGHSCORE, MP3_PLAYLIST } from './constants.js?v=2';
+import { SidForge } from './sidforge.js?v=2';
 
 // ============================================================================
 // State
@@ -17,7 +17,7 @@ let currentDroneVariant = 0;
 let SFX_BANK = {};
 let TRACKER_SONG = null;
 let mp3Elem = null;
-let playlistIndex = 4; // Start with enzo_cage_hypnos.mp3 (index 4)
+let playlistIndex = 14; // Start with enzo_cage_in_der_nacht.mp3 (index 14)
 
 // ============================================================================
 // Base SFX Templates — Optimized C64 SID Sound Design
@@ -204,10 +204,11 @@ function deepClone(obj) {
   return copy;
 }
 
-function generateVariant(template, vIdx, totalVariants) {
+function generateVariant(template, vIdx, totalVariants, name = "") {
+  const effectiveVIdx = name === "engineThrust" ? 0 : vIdx;
   const v = deepClone(template);
   // Use hash for deterministic but pseudo-random variation
-  const h = (i) => hash31(vIdx * 37 + i * 73 + totalVariants * 131);
+  const h = (i) => hash31(effectiveVIdx * 37 + i * 73 + totalVariants * 131);
   const r = (i, min, max) => min + h(i) * (max - min);
 
   // Pitch variation — subtle detune, max ±2 semitones
@@ -272,7 +273,7 @@ function buildSfxBank(templates, numVariants) {
   for (const [name, tmpl] of Object.entries(templates)) {
     // Also store the base template as _v5 (middle variant)
     for (let vi = 0; vi < numVariants; vi++) {
-      bank[`${name}_v${vi}`] = generateVariant(tmpl, vi, numVariants);
+      bank[`${name}_v${vi}`] = generateVariant(tmpl, vi, numVariants, name);
     }
   }
   return bank;
@@ -609,6 +610,15 @@ export async function playNextTrack() {
       await mp3Elem.play();
     }
     console.log("Playing next track: " + track);
+    
+    // Set 0.5s screen overlay prompt with track title
+    const cleanedTitle = track
+      .replace(/\.mp3$/, "")
+      .replace(/^enzo_cage_/, "")
+      .replace(/_/g, " ")
+      .toUpperCase();
+    state.musicTitleTimer = 0.5;
+    state.musicTitleMessage = cleanedTitle;
   } catch (err) {
     console.error("Failed to play next track: " + track, err);
   }

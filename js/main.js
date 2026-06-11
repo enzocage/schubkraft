@@ -8,7 +8,7 @@ import {
   STATE_HIGHSCORE,
   TITLE_MENU_ITEMS,
   CAMPAIGN
-} from './constants.js';
+} from './constants.js?v=2';
 
 import {
   initAudio,
@@ -20,7 +20,7 @@ import {
   updateMusicVolume,
   playNextTrack,
   playSFX
-} from './audio.js';
+} from './audio.js?v=2';
 
 import {
   loadLevel,
@@ -28,16 +28,16 @@ import {
   buildCollisionGrid,
   bakeTerrain,
   showNotification
-} from './physics.js';
+} from './physics.js?v=2';
 
 import {
   bindInputEvents
-} from './input.js';
+} from './input.js?v=2';
 
 import {
   renderGame,
   tickAnimation
-} from './renderer.js';
+} from './renderer.js?v=2';
 
 import {
   toggleEditor,
@@ -46,7 +46,7 @@ import {
   saveEditorUndoState,
   populateEntityProperties,
   handleEditorClick
-} from './editor.js';
+} from './editor.js?v=2';
 
 // Get DOM elements
 const canvas = document.getElementById("gameCanvas");
@@ -135,6 +135,9 @@ function updateVisualEffects(dt) {
   }
   if (state.textPromptTimer > 0) {
     state.textPromptTimer = Math.max(0, state.textPromptTimer - dt);
+  }
+  if (state.musicTitleTimer > 0) {
+    state.musicTitleTimer = Math.max(0, state.musicTitleTimer - dt);
   }
   if (state.transitionTimer > 0) {
     state.transitionTimer = Math.max(0, state.transitionTimer - dt);
@@ -392,7 +395,10 @@ if (btnNextMusic) {
 let hudUserOpened = false;
 const hudPanel = document.getElementById("external-controls");
 
+console.log("[DIAGNOSTIC] main.js: setting up toggleHUD, hudPanel exists:", !!hudPanel);
+
 const toggleHUD = (e) => {
+  console.log("[DIAGNOSTIC] toggleHUD called, event:", e ? e.type : "none");
   if (e) {
     e.stopPropagation();
     e.preventDefault();
@@ -401,15 +407,21 @@ const toggleHUD = (e) => {
   if (hudPanel) {
     if (hudUserOpened) {
       hudPanel.classList.add("active");
+      console.log("[DIAGNOSTIC] added active class to hudPanel");
     } else {
       hudPanel.classList.remove("active");
+      console.log("[DIAGNOSTIC] removed active class from hudPanel");
     }
+  } else {
+    console.log("[DIAGNOSTIC] hudPanel is null inside toggleHUD!");
   }
 };
 
 const btnToggleHUD = document.getElementById("btn-toggle-hud");
+console.log("[DIAGNOSTIC] btnToggleHUD exists:", !!btnToggleHUD);
 if (btnToggleHUD) {
   btnToggleHUD.addEventListener("click", toggleHUD);
+  console.log("[DIAGNOSTIC] registered click listener on btnToggleHUD");
 }
 
 // Toggle Help overlay window
@@ -434,11 +446,6 @@ const toggleHelp = (e) => {
     }
   }
 };
-
-const btnHelp = document.getElementById("btn-help");
-if (btnHelp) {
-  btnHelp.addEventListener("click", toggleHelp);
-}
 
 const btnCloseHelp = document.getElementById("btn-close-help");
 if (btnCloseHelp) {
@@ -874,5 +881,6 @@ if ('ontouchstart' in window) {
 
 // Load Campaign 0 level on initialization
 loadLevel(CAMPAIGN[0]);
+console.log("[DIAGNOSTIC] main.js execution reached the end!");
 // Start requestAnimationFrame loop sequence
 requestAnimationFrame(coreGameLoop);

@@ -326,6 +326,8 @@ export const state = {
   transitionVariant: 0,
   textPromptTimer: 0,
   textPromptMessage: "",
+  musicTitleTimer: 0,
+  musicTitleMessage: "",
   stars: [],
   highscores: [
     { name: "SBY", score: 15000 },

@@ -38,6 +38,13 @@
       banner.innerText = `UNHANDLED REJECTION: ${event.reason}`;
       document.body.appendChild(banner);
     };
+
+    // Global event debugger
+    ["pointerdown", "mousedown", "click", "touchstart"].forEach(type => {
+      window.addEventListener(type, (e) => {
+        console.log(`[EVENT DEBUG] type: ${e.type}, target id: "${e.target.id}", target class: "${e.target.className}", target tag: "${e.target.tagName}", defaultPrevented: ${e.defaultPrevented}`);
+      }, { capture: true, passive: false });
+    });
   </script>
   <title>THRUST — Retro C64 Clone in HTML5</title>
   <!-- Google Fonts -->
@@ -389,7 +396,7 @@
       visibility: visible;
       pointer-events: auto;
     }
-    #btn-toggle-hud:hover, #btn-help:hover {
+    #btn-toggle-hud:hover {
       background: var(--primary) !important;
       color: #000 !important;
       box-shadow: 0 0 10px rgba(124, 252, 0, 0.6) !important;
@@ -639,8 +646,6 @@
       <!-- HUD Settings Toggle Button -->
       <button id="btn-toggle-hud" style="position: absolute; bottom: 8px; left: 8px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; z-index: 24; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">⚙</button>
       
-      <!-- HUD Help Button -->
-      <button id="btn-help" style="display: none; position: absolute; bottom: 8px; left: 38px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; z-index: 24; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; font-family: var(--font-ui); box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">H</button>
 
       <!-- Help Modal Panel Overlay -->
       <div id="help-panel" class="dialog-panel" style="max-height: 80%; width: 90%; max-width: 440px; overflow-y: auto; text-align: left; padding: 20px; font-family: var(--font-ui); line-height: 1.5; font-size: 13px; color: #fff;">
@@ -746,7 +751,7 @@
           <input type="checkbox" id="chk-music" checked>
           <label for="chk-music">Musik</label>
           <input type="range" id="vol-music" min="0" max="100" value="100" style="width:60px; vertical-align:middle; margin-left:6px;">
-          <button id="btn-next-music" style="background: rgba(124, 252, 0, 0.1); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); font-size: 10px; padding: 2px 6px; margin-left: 6px; cursor: pointer; border-radius: 4px;">Next ▶</button>
+          <button id="btn-next-music" style="background: rgba(124, 252, 0, 0.1); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); font-size: 10px; padding: 2px 6px; margin-left: 6px; cursor: pointer; border-radius: 4px;">Next MP3</button>
         </div>
         <div class="ctrl-item">
           <input type="checkbox" id="chk-sfx" checked>
@@ -760,6 +765,47 @@
   </div>
 
   <!-- Main Game Code Modules -->
-  <script type="module" src="./js/main.js"></script>
+  <script type="module" src="./js/main.js?v=2"></script>
+  
+  <script>
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        console.log("=== UI BUTTONS DIAGNOSTIC START ===");
+        ["btn-bezel-menu", "btn-toggle-hud", "external-controls", "gameCanvas"].forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) {
+            console.log(`Element #${id} NOT FOUND in DOM`);
+            return;
+          }
+          const rect = el.getBoundingClientRect();
+          const computedStyle = window.getComputedStyle(el);
+          console.log(`Element #${id}:`, {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            zIndex: computedStyle.zIndex,
+            pointerEvents: computedStyle.pointerEvents
+          });
+        });
+
+        // Test programmatic click
+        const toggleBtn = document.getElementById("btn-toggle-hud");
+        const extControls = document.getElementById("external-controls");
+        if (toggleBtn && extControls) {
+          console.log("Programmatically clicking #btn-toggle-hud...");
+          toggleBtn.click();
+          console.log("After click, #external-controls active class present:", extControls.classList.contains("active"));
+          console.log("Programmatically clicking #btn-toggle-hud again to revert...");
+          toggleBtn.click();
+          console.log("After second click, #external-controls active class present:", extControls.classList.contains("active"));
+        }
+        console.log("=== UI BUTTONS DIAGNOSTIC END ===");
+      }, 1500); // Wait 1.5 seconds for initialization
+    });
+  </script>
 </body>
 </html>

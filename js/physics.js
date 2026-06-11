@@ -1,5 +1,5 @@
-import { state, THEMES, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, CAMPAIGN } from './constants.js';
-import { playSFX, updateTractorSound, updateDroneSound, updatePersistentSounds } from './audio.js';
+import { state, THEMES, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, CAMPAIGN } from './constants.js?v=2';
+import { playSFX, updateTractorSound, updateDroneSound, updatePersistentSounds } from './audio.js?v=2';
 
 export function showNotification(msg) {
   state.textPromptMessage = msg;

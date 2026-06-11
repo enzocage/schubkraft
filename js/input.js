@@ -1,7 +1,7 @@
-import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js';
-import { initAudio, resumeAudioContext, playSFX } from './audio.js';
-import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js';
-import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick } from './editor.js';
+import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js?v=2';
+import { initAudio, resumeAudioContext, playSFX } from './audio.js?v=2';
+import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js?v=2';
+import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick } from './editor.js?v=2';
 
 export function fireLaserBullet() {
   const now = Date.now();
@@ -126,13 +126,13 @@ export function bindInputEvents(canvas) {
       if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") state.keys.rotateLeft = true;
       if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") state.keys.rotateRight = true;
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") state.keys.thrust = true;
-      if (e.key === "Shift" || e.key.toLowerCase() === "s") {
+      if (e.key === "Shift" || e.key.toLowerCase() === "s" || e.key.toLowerCase() === "o") {
         const wasShield = state.keys.shield;
         state.keys.shieldReal = true;
         state.keys.shield = true;
         if (!wasShield && state.ship.alive && state.ship.fuel > 0) playSFX("shieldActivate");
       }
-      if (e.key === " ") {
+      if (e.key === " " || e.key.toLowerCase() === "k") {
         state.keys.fire = true;
         fireLaserBullet();
       }
@@ -213,11 +213,11 @@ export function bindInputEvents(canvas) {
       state.keys.wHoldTime = 0;
       if (!state.keys.shieldReal) state.keys.shield = false;
     }
-    if (e.key === "Shift" || e.key.toLowerCase() === "s") {
+    if (e.key === "Shift" || e.key.toLowerCase() === "s" || e.key.toLowerCase() === "o") {
       state.keys.shieldReal = false;
       if (state.keys.wHoldTime <= 0.25) state.keys.shield = false;
     }
-    if (e.key === " ") state.keys.fire = false;
+    if (e.key === " " || e.key.toLowerCase() === "k") state.keys.fire = false;
   });
 
   canvas.addEventListener("pointerdown", (e) => {
