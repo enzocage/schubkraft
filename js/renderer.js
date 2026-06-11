@@ -1223,8 +1223,13 @@ export function renderTitleScreen(ctx) {
     drawVectorText(ctx, msg, 70, 154, 0.38, "#ff9900");
   }
 
-  drawVectorText(ctx, "CONTROLS: WASD/O:SHIELD/K:FIRE + SPACE", 84, 170, 0.24, "#555");
-  drawVectorText(ctx, "PRESS H FOR HELP", 84, 179, 0.28, "#7CFC00");
+  drawVectorText(ctx, "W:SCHUB A/D:DREHEN K/SPACE:FEUER O/S:SCHILD+TRAKTOR", 36, 163, 0.24, "#888");
+  // Fuel scarcity warning, gently blinking amber
+  const fuelHintBlink = Math.floor(Date.now() / 600) % 3 !== 0;
+  if (fuelHintBlink) {
+    drawVectorText(ctx, "FUEL IST KNAPP - SPARSAM FLIEGEN!", 80, 171.5, 0.24, "#ffcc00");
+  }
+  drawVectorText(ctx, "PRESS H FOR HELP", 84, 179.5, 0.28, "#7CFC00");
   drawVectorText(ctx, "coding by felix schmidt 2026", 72, 188, 0.25, "#333");
 }
 
