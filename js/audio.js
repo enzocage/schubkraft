@@ -571,8 +571,24 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Title music
-  TRACKER_SONG = FALLBACK_SONG;
+  // 3. Title music: try loading Debussy MIDI, fall back to metal theme
+  try {
+    const resp = await fetch("debussy-clair-de-lune.mid");
+    if (resp.ok) {
+      const buf = await resp.arrayBuffer();
+      const midiData = parseMidi(new Uint8Array(buf));
+      const trackerSong = midiToTrackerSong(midiData);
+      if (trackerSong) {
+        TRACKER_SONG = trackerSong;
+        console.log("MIDI loaded: Clair de Lune");
+      }
+    }
+  } catch (e) {
+    console.warn("MIDI load failed, using fallback:", e.message);
+  }
+  if (!TRACKER_SONG) {
+    TRACKER_SONG = FALLBACK_SONG;
+  }
 
   forge.loadSong(TRACKER_SONG);
   sid = forge; // publish only when fully ready
