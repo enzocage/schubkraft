@@ -1,7 +1,7 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js?v=2';
 import { initAudio, resumeAudioContext, playSFX } from './audio.js?v=2';
 import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js?v=2';
-import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick } from './editor.js?v=2';
+import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick, startPlaytest } from './editor.js?v=2';
 
 export function fireLaserBullet() {
   const now = Date.now();
@@ -151,11 +151,7 @@ export function bindInputEvents(canvas) {
       if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") state.editorCam.y += pSpeed;
       
       if (e.key.toLowerCase() === "t") {
-        state.editorLevelCopy = JSON.parse(JSON.stringify(state.activeLevel));
-        state.gameState = STATE_PLAYING;
-        state.lives = 1;
-        loadLevel(state.editorLevelCopy);
-        showNotification("PLAYTEST MODUS");
+        startPlaytest();
       }
       if (e.key.toLowerCase() === "z" && e.ctrlKey) {
         triggerEditorUndo();

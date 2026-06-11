@@ -7,8 +7,14 @@ import {
   STATE_EDITOR,
   STATE_HIGHSCORE,
   TITLE_MENU_ITEMS,
-  CAMPAIGN
+  CAMPAIGN,
+  THEMES
 } from './constants.js?v=2';
+
+import {
+  generateLevelSuggestions,
+  DIFFICULTY_PRESETS
+} from './levelgen.js?v=2';
 
 import {
   initAudio,
@@ -45,7 +51,8 @@ import {
   triggerEditorRedo,
   saveEditorUndoState,
   populateEntityProperties,
-  handleEditorClick
+  handleEditorClick,
+  startPlaytest
 } from './editor.js?v=2';
 
 // Get DOM elements
@@ -90,7 +97,7 @@ function buildCampaignList() {
     btn.className = "editor-btn";
     btn.style.textAlign = "left";
     btn.style.padding = "8px 12px";
-    btn.innerText = `${idx + 1}. ${level.name} (${level.theme.toUpperCase()})`;
+    btn.innerText = `${idx + 1}. ${level.name} (${level.difficulty || level.theme.toUpperCase()})`;
     btn.addEventListener("click", () => {
       state.lives = 3;
       state.score = 0;
@@ -320,6 +327,13 @@ function coreGameLoop(time) {
     }
   }
 
+  // Show the music toggle only while actually playing
+  const musicBtnShouldShow = state.gameState === STATE_PLAYING;
+  if (musicBtnShouldShow !== musicPlayBtnShown) {
+    musicPlayBtnShown = musicBtnShouldShow;
+    if (musicPlayBtn) musicPlayBtn.style.display = musicBtnShouldShow ? "flex" : "none";
+  }
+
   renderGame(canvas, ctx);
   requestAnimationFrame(coreGameLoop);
 }
@@ -363,6 +377,38 @@ if (chkMusic) {
   chkMusic.addEventListener("change", (e) => {
     state.musicEnabled = e.target.checked;
     updateMusicVolume();
+    refreshMusicPlayBtn();
+  });
+}
+
+// In-game music toggle (bottom right, play mode only — shown/hidden by the game loop)
+const musicPlayBtn = document.getElementById("btn-music-play-toggle");
+let musicPlayBtnShown = false;
+
+function refreshMusicPlayBtn() {
+  if (!musicPlayBtn) return;
+  if (state.musicEnabled) {
+    musicPlayBtn.style.color = "var(--primary)";
+    musicPlayBtn.style.borderColor = "rgba(124, 252, 0, 0.4)";
+    musicPlayBtn.style.textDecoration = "none";
+    musicPlayBtn.style.opacity = "1";
+  } else {
+    musicPlayBtn.style.color = "#ff5555";
+    musicPlayBtn.style.borderColor = "rgba(255, 85, 85, 0.4)";
+    musicPlayBtn.style.textDecoration = "line-through";
+    musicPlayBtn.style.opacity = "0.75";
+  }
+}
+
+if (musicPlayBtn) {
+  musicPlayBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    state.musicEnabled = !state.musicEnabled;
+    updateMusicVolume();
+    if (chkMusic) chkMusic.checked = state.musicEnabled;
+    refreshMusicPlayBtn();
+    playSFX("select");
   });
 }
 
@@ -765,11 +811,7 @@ document.getElementById("exit-y-range").addEventListener("input", (e) => {
 });
 
 document.getElementById("btn-test-level").addEventListener("click", () => {
-  state.editorLevelCopy = JSON.parse(JSON.stringify(state.activeLevel));
-  state.gameState = STATE_PLAYING;
-  state.lives = 1;
-  loadLevel(state.editorLevelCopy);
-  showNotification("PLAYTEST MODUS");
+  startPlaytest();
 });
 
 document.getElementById("btn-export").addEventListener("click", () => {
@@ -856,6 +898,195 @@ document.getElementById("btn-clear-level").addEventListener("click", () => {
     loadLevel(state.activeLevel);
   }
 });
+
+// ==========================================
+// 6.5 AI LEVEL GENERATOR (KI-GENERATOR)
+// ==========================================
+
+let aiSuggestions = [];
+let aiIndex = 0;
+let aiDifficulty = "medium";
+
+const aiDiffPanel = document.getElementById("ai-difficulty-panel");
+const aiPreviewPanel = document.getElementById("ai-preview-panel");
+
+function drawAIPreview() {
+  const sug = aiSuggestions[aiIndex];
+  if (!sug) return;
+  const lvl = sug.level;
+  const meta = sug.meta;
+  const theme = THEMES[lvl.theme] || THEMES.c64;
+
+  const cv = document.getElementById("ai-preview-canvas");
+  const c = cv.getContext("2d");
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.fillStyle = "#020208";
+  c.fillRect(0, 0, cv.width, cv.height);
+
+  const worldH = meta.depth + 60;
+  const pad = 14;
+  const scale = Math.min((cv.width - pad * 2) / meta.worldW, (cv.height - pad * 2) / worldH);
+  const ox = (cv.width - meta.worldW * scale) / 2;
+  const oy = (cv.height - worldH * scale) / 2;
+  const X = (x) => ox + x * scale;
+  const Y = (y) => oy + y * scale;
+
+  // Terrain silhouette — the actual maze / world shape
+  for (const poly of lvl.polygons) {
+    if (poly.length < 3) continue;
+    c.beginPath();
+    c.moveTo(X(poly[0][0]), Y(poly[0][1]));
+    for (let i = 1; i < poly.length; i++) c.lineTo(X(poly[i][0]), Y(poly[i][1]));
+    c.closePath();
+    c.globalAlpha = 0.38;
+    c.fillStyle = theme.terrain;
+    c.fill();
+    c.globalAlpha = 1;
+    c.strokeStyle = theme.edge || theme.terrain;
+    c.lineWidth = 1;
+    c.stroke();
+  }
+
+  // Exit altitude line
+  c.setLineDash([4, 3]);
+  c.strokeStyle = "rgba(0,255,255,0.5)";
+  c.beginPath();
+  c.moveTo(X(0), Y(lvl.exitY));
+  c.lineTo(X(meta.worldW), Y(lvl.exitY));
+  c.stroke();
+  c.setLineDash([]);
+
+  const dot = (x, y, color, r) => {
+    c.fillStyle = color;
+    c.beginPath();
+    c.arc(X(x), Y(y), r, 0, Math.PI * 2);
+    c.fill();
+  };
+
+  for (const ent of lvl.entities) {
+    if (ent.type === "door") {
+      c.strokeStyle = "#2288ff";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(X(ent.x), Y(ent.y));
+      c.lineTo(X(ent.x + ent.w), Y(ent.y));
+      c.stroke();
+      c.lineWidth = 1;
+    }
+    else if (ent.type === "switch") dot(ent.x, ent.y, "#00ffff", 2.5);
+    else if (ent.type === "turret") dot(ent.x, ent.y, "#ff4444", 3);
+    else if (ent.type === "reactor") dot(ent.x, ent.y, "#ff22ff", 3.5);
+    else if (ent.type === "pod") {
+      dot(ent.x, ent.y, "#ffaa00", 3);
+      c.strokeStyle = "#ffaa00";
+      c.beginPath();
+      c.arc(X(ent.x), Y(ent.y), 5.5, 0, Math.PI * 2);
+      c.stroke();
+    }
+    else if (ent.type === "fuel") {
+      c.fillStyle = "#ffff00";
+      c.fillRect(X(ent.x) - 2.5, Y(ent.y) - 2.5, 5, 5);
+    }
+  }
+
+  // Spawn marker (ship triangle)
+  c.fillStyle = "#7CFC00";
+  c.beginPath();
+  c.moveTo(X(lvl.spawn.x), Y(lvl.spawn.y) - 5);
+  c.lineTo(X(lvl.spawn.x) - 4, Y(lvl.spawn.y) + 4);
+  c.lineTo(X(lvl.spawn.x) + 4, Y(lvl.spawn.y) + 4);
+  c.closePath();
+  c.fill();
+
+  document.getElementById("ai-preview-title").innerText =
+    `VORSCHLAG ${aiIndex + 1} / ${aiSuggestions.length}`;
+  document.getElementById("ai-preview-info").innerHTML =
+    `<b style="color: var(--primary); font-size: 13px;">${lvl.name}</b>` +
+    ` &nbsp;·&nbsp; ${meta.archetype} &nbsp;·&nbsp; ${meta.difficultyLabel}<br>` +
+    `TIEFE ${meta.depth}px · BREITE ${meta.worldW}px · GESCHÜTZE ${meta.turrets} · ` +
+    `FUEL-PODS ${meta.fuels} · TÜREN ${meta.doors}<br>` +
+    `GRAVITATION ${lvl.gravity} · SPRIT ${lvl.fuel} · THEME ${lvl.theme.toUpperCase()}`;
+}
+
+function startAIGeneration(diff) {
+  aiDifficulty = diff;
+  aiSuggestions = generateLevelSuggestions(diff, 20);
+  aiIndex = 0;
+  aiDiffPanel.style.display = "none";
+  aiPreviewPanel.style.display = "block";
+  drawAIPreview();
+  showNotification(`20 KI-VORSCHLAEGE (${DIFFICULTY_PRESETS[diff].label})`);
+  playSFX("select");
+}
+
+function stepAISuggestion(dir) {
+  if (aiSuggestions.length === 0) return;
+  aiIndex = (aiIndex + dir + aiSuggestions.length) % aiSuggestions.length;
+  drawAIPreview();
+  playSFX("select");
+}
+
+document.getElementById("btn-ai-generate").addEventListener("click", () => {
+  aiPreviewPanel.style.display = "none";
+  aiDiffPanel.style.display = "block";
+  playSFX("select");
+});
+
+document.getElementById("btn-ai-diff-easy").addEventListener("click", () => startAIGeneration("easy"));
+document.getElementById("btn-ai-diff-medium").addEventListener("click", () => startAIGeneration("medium"));
+document.getElementById("btn-ai-diff-hard").addEventListener("click", () => startAIGeneration("hard"));
+
+document.getElementById("btn-ai-diff-cancel").addEventListener("click", () => {
+  aiDiffPanel.style.display = "none";
+});
+
+document.getElementById("btn-ai-prev").addEventListener("click", () => stepAISuggestion(-1));
+document.getElementById("btn-ai-next").addEventListener("click", () => stepAISuggestion(1));
+
+document.getElementById("btn-ai-reroll").addEventListener("click", () => {
+  aiSuggestions = generateLevelSuggestions(aiDifficulty, 20);
+  aiIndex = 0;
+  drawAIPreview();
+  showNotification("NEUE VORSCHLAEGE GENERIERT");
+  playSFX("select");
+});
+
+document.getElementById("btn-ai-cancel").addEventListener("click", () => {
+  aiPreviewPanel.style.display = "none";
+});
+
+document.getElementById("btn-ai-accept").addEventListener("click", () => {
+  const chosen = aiSuggestions[aiIndex];
+  if (!chosen) return;
+  saveEditorUndoState();
+  state.activePolygon = [];
+  state.editorSelectedEntity = null;
+  loadLevel(chosen.level);
+  state.editorCam.x = chosen.level.spawn.x;
+  state.editorCam.y = chosen.level.spawn.y;
+  aiPreviewPanel.style.display = "none";
+  showNotification("KI-LEVEL GELADEN: " + chosen.level.name);
+  playSFX("fuelCollected");
+});
+
+// Keyboard stepping while the preview is open (capture phase so the
+// editor camera pan in input.js never sees these keys)
+window.addEventListener("keydown", (e) => {
+  if (aiPreviewPanel.style.display === "block") {
+    if (e.key === "ArrowLeft") stepAISuggestion(-1);
+    else if (e.key === "ArrowRight") stepAISuggestion(1);
+    else if (e.key === "Enter") document.getElementById("btn-ai-accept").click();
+    else if (e.key === "Escape") aiPreviewPanel.style.display = "none";
+    else return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+  else if (aiDiffPanel.style.display === "block" && e.key === "Escape") {
+    aiDiffPanel.style.display = "none";
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
 
 function setBtnActive(id) {
   document.getElementById("btn-mode-poly").classList.remove("active");

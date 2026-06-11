@@ -1,4 +1,4 @@
-import { state, STATE_EDITOR, STATE_TITLE } from './constants.js?v=2';
+import { state, STATE_EDITOR, STATE_TITLE, STATE_PLAYING } from './constants.js?v=2';
 import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification } from './physics.js?v=2';
 import { playSFX } from './audio.js?v=2';
 
@@ -32,6 +32,23 @@ export function triggerEditorRedo() {
   }
 }
 
+// Playtest from the editor: hide every editor overlay so nothing covers the
+// game while testing. Pressing E brings the editor (and its panels) back.
+export function startPlaytest() {
+  state.editorLevelCopy = JSON.parse(JSON.stringify(state.activeLevel));
+  state.gameState = STATE_PLAYING;
+  state.lives = 1;
+  loadLevel(state.editorLevelCopy);
+
+  ["editor-toolbar", "editor-status-bar", "theme-settings-panel",
+   "entity-properties-panel", "ai-difficulty-panel", "ai-preview-panel"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  showNotification("PLAYTEST MODUS (E = EDITOR)");
+}
+
 export function toggleEditor(active) {
   if (active) {
     state.gameState = STATE_EDITOR;
@@ -51,6 +68,10 @@ export function toggleEditor(active) {
     document.getElementById("editor-status-bar").style.display = "none";
     document.getElementById("theme-settings-panel").style.display = "none";
     document.getElementById("entity-properties-panel").style.display = "none";
+    const aiDiff = document.getElementById("ai-difficulty-panel");
+    if (aiDiff) aiDiff.style.display = "none";
+    const aiPrev = document.getElementById("ai-preview-panel");
+    if (aiPrev) aiPrev.style.display = "none";
     state.gameState = STATE_TITLE;
   }
 }

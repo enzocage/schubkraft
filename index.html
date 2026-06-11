@@ -491,6 +491,45 @@
         <button id="btn-close-campaign-select" class="editor-btn" style="margin-top: 14px; width: 100%;">Schließen</button>
       </div>
 
+      <!-- AI Level Generator: Difficulty Select Modal -->
+      <div id="ai-difficulty-panel" class="dialog-panel" style="max-width: 360px;">
+        <div class="dialog-title">KI LEVEL-GENERATOR</div>
+        <div class="dialog-body" style="gap: 10px;">
+          <div style="font-size: 12px; color: #bbb;">Wähle den Schwierigkeitsgrad — die KI entwirft anschließend 20 Level-Vorschläge zum Durchblättern.</div>
+          <button id="btn-ai-diff-easy" class="editor-btn" style="padding: 10px;">LEICHT<br><span style="font-size:10px; font-weight:400; text-transform:none; opacity:0.75;">Kleine Mine · wenige Gegner · viel Sprit</span></button>
+          <button id="btn-ai-diff-medium" class="editor-btn" style="border-color: #ffcc00; color: #ffcc00; padding: 10px;">MITTEL<br><span style="font-size:10px; font-weight:400; text-transform:none; opacity:0.75;">Ausgewogen · mehr Abwehr · erste Türen</span></button>
+          <button id="btn-ai-diff-hard" class="editor-btn" style="border-color: #ff3333; color: #ff3333; padding: 10px;">SCHWER<br><span style="font-size:10px; font-weight:400; text-transform:none; opacity:0.75;">Riesig & tief · viele Geschütze · Tür-Schaltungen</span></button>
+          <button id="btn-ai-diff-cancel" class="editor-btn" style="border-color: #888; color: #888;">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- AI Level Generator: Suggestion Preview Modal -->
+      <div id="ai-preview-panel" class="dialog-panel" style="max-width: 440px; max-height: 92%; overflow-y: auto;">
+        <div class="dialog-title" id="ai-preview-title">VORSCHLAG 1 / 20</div>
+        <div class="dialog-body" style="gap: 10px;">
+          <canvas id="ai-preview-canvas" width="380" height="360" style="width: 100%; background: #020208; border: 1px solid rgba(124, 252, 0, 0.25); border-radius: 6px;"></canvas>
+          <div id="ai-preview-info" style="font-size: 11px; color: #ccc; line-height: 1.55;"></div>
+          <div style="font-size: 10px; color: #888;">
+            <span style="color:#7CFC00;">&#9650; Start</span> &nbsp;
+            <span style="color:#ffaa00;">&#9679; Pod</span> &nbsp;
+            <span style="color:#ff4444;">&#9679; Turret</span> &nbsp;
+            <span style="color:#ffff00;">&#9632; Fuel</span> &nbsp;
+            <span style="color:#ff22ff;">&#9679; Reaktor</span> &nbsp;
+            <span style="color:#2288ff;">&#9472; Tür</span> &nbsp;
+            <span style="color:#00ffff;">&#9679; Schalter</span>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btn-ai-prev" class="editor-btn" style="flex: 1;">&#9664; Zurück</button>
+            <button id="btn-ai-next" class="editor-btn" style="flex: 1;">Weiter &#9654;</button>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btn-ai-accept" class="editor-btn" style="flex: 2;">Übernehmen</button>
+            <button id="btn-ai-reroll" class="editor-btn" style="flex: 1; border-color: #ffcc00; color: #ffcc00;">Neu würfeln</button>
+            <button id="btn-ai-cancel" class="editor-btn" style="flex: 1; border-color: #888; color: #888;">Abbrechen</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Editor Selected Entity Properties Modal -->
       <div id="entity-properties-panel" class="dialog-panel" style="top: 35%; max-width: 380px; box-shadow: 0 0 20px rgba(0,255,255,0.25);">
         <div class="dialog-title">Objekt-Eigenschaften</div>
@@ -616,6 +655,9 @@
           <option value="bridge" style="background:#000;">Plattform/Brücke</option>
         </select>
         
+        <div class="editor-section-title">KI-GENERATOR</div>
+        <button id="btn-ai-generate" class="editor-btn" style="border-color: #cc66ff; color: #cc66ff;">KI: Level generieren</button>
+
         <div class="editor-section-title">ANSICHT</div>
         <div style="display: flex; gap: 6px;">
           <button id="btn-zoom-in" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa; flex: 1;">Z +</button>
@@ -645,6 +687,9 @@
 
       <!-- HUD Settings Toggle Button -->
       <button id="btn-toggle-hud" style="position: absolute; bottom: 8px; left: 8px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; z-index: 24; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">⚙</button>
+
+      <!-- Music Toggle Button (play mode only) -->
+      <button id="btn-music-play-toggle" title="Musik an/aus" style="position: absolute; bottom: 8px; right: 8px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; z-index: 24; display: none; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">♫</button>
       
 
       <!-- Help Modal Panel Overlay -->
