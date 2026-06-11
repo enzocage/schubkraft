@@ -111,7 +111,7 @@ export function bindInputEvents(canvas) {
           state.highscores.push({ name: state.hsNewName, score: state.score });
           state.highscores.sort((a,b) => b.score - a.score);
           state.highscores = state.highscores.slice(0, 5);
-          localStorage.setItem("thrust_highscores", JSON.stringify(state.highscores));
+          localStorage.setItem("schubkraft_highscores", JSON.stringify(state.highscores));
           
           state.gameState = STATE_HIGHSCORE;
           state.titleMenuIndex = 3;

@@ -1014,7 +1014,7 @@ export function renderTitleScreen(ctx) {
     ctx.shadowBlur = 8 + titlePulse * 10;
     ctx.shadowColor = "#7CFC00";
   }
-  drawVectorText(ctx, "THRUST", 75, 34, 1.4, "#7CFC00");
+  drawVectorText(ctx, "SCHUBKRAFT", 90, 34, 1.4, "#7CFC00");
   ctx.restore();
   drawVectorText(ctx, "HTML5 SPECIAL EDITION", 68, 64, 0.32, "#ffffff");
 

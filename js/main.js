@@ -76,7 +76,7 @@ for (let i = 0; i < 180; i++) {
 }
 
 // Load highscores from localstorage
-const localHS = localStorage.getItem("thrust_highscores");
+const localHS = localStorage.getItem("schubkraft_highscores");
 if (localHS) {
   try {
     state.highscores = JSON.parse(localHS);

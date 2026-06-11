@@ -494,7 +494,7 @@ function midiToTrackerSong(midiData) {
 // Title theme
 // ============================================================================
 const FALLBACK_SONG = {
-  title: "THRUST — SID METAL THEME",
+  title: "SCHUBKRAFT — SID METAL THEME",
   speed: 5,
   instruments: {
     bass: { wave: "sawtooth", adsr: [0, 4, 7, 3], filter: { mode: "lp", cutoff: 0.35, res: 2 } },

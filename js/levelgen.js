@@ -1,6 +1,6 @@
 // ============================================================================
 // KI LEVEL GENERATOR
-// Procedurally builds Thrust-style cave systems for the editor.
+// Procedurally builds Schubkraft-style cave systems for the editor.
 // A meandering centerline is carved downward, then turned into two wall
 // polygons + floor + pod pedestal. Entities follow the same solvability
 // rules as the hand-made campaign:
