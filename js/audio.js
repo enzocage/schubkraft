@@ -572,13 +572,13 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Title music: try playing Wizball title theme MP3, fall back to metal theme
+  // 3. Title music: try playing enzo cage hypnos MP3, fall back to metal theme
   try {
-    mp3Elem = new Audio("https://nu.vgmtreasurechest.com/soundtracks/wizball-commodore-64/edccdncx/01_Title%20Screen.mp3");
+    mp3Elem = new Audio("https://enzocage.de/mp3/enzo_cage_atom/enzo_cage_hypnos.mp3");
     mp3Elem.loop = true;
     mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
     await mp3Elem.play();
-    console.log("MP3 playing: Wizball Title Screen");
+    console.log("MP3 playing: Enzo Cage Hypnos");
   } catch (e) {
     mp3Elem = null;
     console.warn("MP3 play failed, using fallback:", e.message);
@@ -588,7 +588,7 @@ async function doInitAudio() {
     forge.loadSong(TRACKER_SONG);
   }
   sid = forge; // publish only when fully ready
-  const musicLabel = mp3Elem ? "Wizball Title Screen (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
+  const musicLabel = mp3Elem ? "Enzo Cage Hypnos (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
   console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
 }
 
