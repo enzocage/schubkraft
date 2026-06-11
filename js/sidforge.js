@@ -38,7 +38,7 @@ class SidCoreProcessor extends AudioWorkletProcessor {
     this.musicStates = [{}, {}, {}];
     
     // Channels volume
-    this.musicVolume = 1.0;
+    this.musicVolume = 0.10;
     this.sfxVolume = 1.0;
     this.masterVolume = 0.55;
 

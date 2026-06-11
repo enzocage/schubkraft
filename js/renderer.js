@@ -1031,8 +1031,8 @@ export function renderTitleScreen(ctx) {
     drawVectorText(ctx, msg, 70, 154, 0.38, "#ff9900");
   }
 
-  drawVectorText(ctx, "PFEILTASTEN: NAVIGIEREN / SPACE: WAHL", 46, 178, 0.25, "#555");
-  drawVectorText(ctx, "(C) 1986 FIREBIRD CLONE", 84, 188, 0.25, "#333");
+  drawVectorText(ctx, "W A S D + SHIFT + SPACE", 70, 178, 0.28, "#555");
+  drawVectorText(ctx, "Coding by Felix Schmidt", 84, 188, 0.25, "#333");
 }
 
 export function renderGameOverScreen(ctx) {
