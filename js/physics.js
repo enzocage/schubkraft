@@ -899,9 +899,14 @@ function updateEntities(dt) {
     if (target.type === "fuel" && dist > 0) {
       suckingActive = true;
       isSuckingFuel = true;
-      const drain = Math.min(2.5, target.health * 100);
+      // Depot capacity = total fuel units it holds (level JSON "capacity",
+      // legacy levels without it keep the old ~125 unit depots).
+      // health stays 0..1 so the canister gauge rendering keeps working.
+      const capacity = target.capacity || 125;
+      const remaining = target.health * capacity;
+      const drain = Math.min(2.5, remaining);
       state.ship.fuel = Math.min(state.activeLevel.fuel, state.ship.fuel + drain);
-      target.health -= 0.02;
+      target.health -= drain / capacity;
       
       if (target.health <= 0) {
         target.active = false;

@@ -1,5 +1,3 @@
-import { generateCampaign } from './levelgen.js?v=2';
-
 export const STATE_TITLE = "TITLE";
 export const STATE_PLAYING = "PLAYING";
 export const STATE_LEVEL_COMPLETE = "LEVEL_COMPLETE";
@@ -28,15 +26,38 @@ export const THEMES = {
 export const TITLE_MENU_ITEMS = ["SPIELEN", "KAMPAGNE SELECT", "LEVEL EDITOR", "HIGHSCORES"];
 
 // ============================================================================
-// CAMPAIGN — 15 procedurally generated levels (KI level designer), ascending
-// difficulty from LEICHT to SCHWER. The seeds are hand-vetted: every level
-// passed corridor-gap / entity-bounds / switch-above-door validation, depths
-// increase strictly, and archetypes alternate between neighbouring levels.
-// Regenerate candidates by tweaking the seeds and checking the result in the
-// editor preview (KI: Level generieren).
+// CAMPAIGN — loaded at startup from the /levels folder (plain level JSON).
+// levels/manifest.json lists the playable files in campaign order; any level
+// dropped into the folder and added to the manifest appears automatically in
+// KAMPAGNE SELECT. Custom levels saved from the KI generator are appended
+// from localStorage. Regenerate the 15 originals: node tools/export-campaign.mjs
 // ============================================================================
-const CAMPAIGN_SEEDS = [31337, 31438, 31539, 31842, 32347, 32448, 32549, 32650, 32953, 33054, 33256, 34165, 34468, 34670, 37801];
-export const CAMPAIGN = generateCampaign(CAMPAIGN_SEEDS);
+export const CAMPAIGN = [];
+
+export const CUSTOM_LEVELS_KEY = "schubkraft_custom_levels";
+
+export async function loadCampaignLevels() {
+  CAMPAIGN.length = 0;
+  try {
+    const manifest = await (await fetch("levels/manifest.json?ts=" + Date.now())).json();
+    const loaded = await Promise.all(
+      manifest.map(f => fetch("levels/" + f).then(r => r.json()))
+    );
+    CAMPAIGN.push(...loaded);
+  } catch (err) {
+    console.error("Kampagnen-Level konnten nicht geladen werden:", err);
+  }
+  // Custom levels saved from the KI generator (browser can't write to disk,
+  // so accepted levels persist in localStorage and join the campaign here)
+  try {
+    const customs = JSON.parse(localStorage.getItem(CUSTOM_LEVELS_KEY) || "[]");
+    for (const lvl of customs) {
+      lvl.custom = true;
+      CAMPAIGN.push(lvl);
+    }
+  } catch (err) {}
+  return CAMPAIGN;
+}
 
 export const state = {
   gameState: STATE_TITLE,

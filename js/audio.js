@@ -17,7 +17,7 @@ let currentDroneVariant = 0;
 let SFX_BANK = {};
 let TRACKER_SONG = null;
 let mp3Elem = null;
-let playlistIndex = 14; // Start with enzo_cage_in_der_nacht.mp3 (index 14)
+let playlistIndex = 1; // Start with enzo_cage_inner_switch.mp3 (index 1)
 
 // ============================================================================
 // Base SFX Templates — Optimized C64 SID Sound Design

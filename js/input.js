@@ -61,6 +61,7 @@ export function bindInputEvents(canvas) {
         playSFX("fuelCollected");
         
         if (state.titleMenuIndex === 0) {
+          if (CAMPAIGN.length === 0) return; // levels still loading from /levels
           state.lives = 3;
           state.score = 0;
           state.activeCampaignIdx = 0;

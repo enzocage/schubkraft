@@ -8,6 +8,8 @@ import {
   STATE_HIGHSCORE,
   TITLE_MENU_ITEMS,
   CAMPAIGN,
+  loadCampaignLevels,
+  CUSTOM_LEVELS_KEY,
   THEMES
 } from './constants.js?v=2';
 
@@ -98,7 +100,9 @@ function buildCampaignList() {
     btn.className = "editor-btn";
     btn.style.textAlign = "left";
     btn.style.padding = "8px 12px";
-    btn.innerText = `${idx + 1}. ${level.name} (${level.difficulty || level.theme.toUpperCase()})`;
+    const tag = level.custom ? "KI-LEVEL" : (level.difficulty || level.theme.toUpperCase());
+    btn.innerText = `${idx + 1}. ${level.name} (${tag})`;
+    if (level.custom) btn.style.borderColor = "#ffcc00";
     btn.addEventListener("click", () => {
       state.lives = 3;
       state.score = 0;
@@ -113,7 +117,6 @@ function buildCampaignList() {
     container.appendChild(btn);
   });
 }
-buildCampaignList();
 
 document.getElementById("btn-close-campaign-select").addEventListener("click", () => {
   document.getElementById("campaign-select-panel").style.display = "none";
@@ -376,7 +379,8 @@ function coreGameLoop(time) {
     if (ostPromoBadge) ostPromoBadge.style.display = ostShouldShow ? "flex" : "none";
   }
 
-  renderGame(canvas, ctx);
+  // Campaign levels load async from /levels — skip rendering until ready
+  if (state.activeLevel) renderGame(canvas, ctx);
   requestAnimationFrame(coreGameLoop);
 }
 
@@ -1123,6 +1127,40 @@ document.getElementById("btn-ai-accept").addEventListener("click", () => {
   playSFX("fuelCollected");
 });
 
+// Save the previewed KI level into the campaign: persists in localStorage
+// (instantly selectable in KAMPAGNE SELECT) and downloads the JSON so it
+// can be dropped into /levels + manifest.json for a permanent install.
+document.getElementById("btn-ai-save-campaign").addEventListener("click", () => {
+  const chosen = aiSuggestions[aiIndex];
+  if (!chosen) return;
+  const lvl = JSON.parse(JSON.stringify(chosen.level));
+  lvl.custom = true;
+  // Same fuel balance as the rebalanced campaign: half start fuel,
+  // depots carry a real capacity so energy must be managed
+  lvl.fuel = Math.round((lvl.fuel * 0.5) / 100) * 100;
+  for (const e of lvl.entities) {
+    if (e.type === "fuel" && e.capacity === undefined) e.capacity = 650;
+  }
+
+  const customs = JSON.parse(localStorage.getItem(CUSTOM_LEVELS_KEY) || "[]");
+  customs.push(lvl);
+  localStorage.setItem(CUSTOM_LEVELS_KEY, JSON.stringify(customs));
+  CAMPAIGN.push(lvl);
+  buildCampaignList();
+
+  const slug = lvl.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lvl, null, 2));
+  const a = document.createElement("a");
+  a.href = dataStr;
+  a.download = slug + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  showNotification("IN KAMPAGNE GESPEICHERT: " + lvl.name);
+  playSFX("fuelCollected");
+});
+
 // Keyboard stepping while the preview is open (capture phase so the
 // editor camera pan in input.js never sees these keys)
 window.addEventListener("keydown", (e) => {
@@ -1164,8 +1202,11 @@ if ('ontouchstart' in window) {
   }, 4500);
 }
 
-// Load Campaign 0 level on initialization
-loadLevel(CAMPAIGN[0]);
-console.log("[DIAGNOSTIC] main.js execution reached the end!");
+// Load the campaign from /levels, then start with level 1
+loadCampaignLevels().then(() => {
+  buildCampaignList();
+  if (CAMPAIGN.length > 0) loadLevel(CAMPAIGN[0]);
+  console.log(`[DIAGNOSTIC] Kampagne geladen: ${CAMPAIGN.length} Level aus /levels`);
+});
 // Start requestAnimationFrame loop sequence
 requestAnimationFrame(coreGameLoop);
