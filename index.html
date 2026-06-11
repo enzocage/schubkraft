@@ -402,6 +402,53 @@
       box-shadow: 0 0 10px rgba(124, 252, 0, 0.6) !important;
     }
 
+    /* Soundtrack promo badge (title screen only) */
+    #soundtrack-promo {
+      position: absolute;
+      bottom: 42px;
+      right: 14px;
+      z-index: 24;
+      display: none;
+      align-items: center;
+      gap: 7px;
+      text-decoration: none;
+      background: rgba(10, 10, 22, 0.82);
+      border: 1px solid rgba(124, 252, 0, 0.45);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-family: var(--font-retro);
+      font-size: 8px;
+      color: var(--primary);
+      letter-spacing: 1px;
+      box-shadow: 0 0 10px rgba(124, 252, 0, 0.15);
+      animation: ostPulse 2.4s ease-in-out infinite;
+      transition: transform 0.2s, background 0.2s;
+    }
+    #soundtrack-promo:hover {
+      background: rgba(124, 252, 0, 0.15);
+      transform: translateY(-2px);
+    }
+    #soundtrack-promo .ost-note {
+      font-size: 14px;
+      animation: ostBounce 1.2s ease-in-out infinite;
+      display: inline-block;
+    }
+    #soundtrack-promo .ost-sub {
+      color: #9adf6a;
+      font-size: 6px;
+      display: block;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+    @keyframes ostPulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(124, 252, 0, 0.12); border-color: rgba(124, 252, 0, 0.35); }
+      50% { box-shadow: 0 0 16px rgba(124, 252, 0, 0.4); border-color: rgba(124, 252, 0, 0.8); }
+    }
+    @keyframes ostBounce {
+      0%, 100% { transform: translateY(0) rotate(-6deg); }
+      50% { transform: translateY(-2px) rotate(6deg); }
+    }
+
     .ctrl-item {
       display: flex;
       align-items: center;
@@ -690,7 +737,16 @@
 
       <!-- Music Toggle Button (play mode only) -->
       <button id="btn-music-play-toggle" title="Musik an/aus" style="position: absolute; bottom: 8px; right: 8px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; z-index: 24; display: none; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">♫</button>
-      
+
+      <!-- Soundtrack promo badge (title screen only) -->
+      <a id="soundtrack-promo" href="https://audiomack.com/enzocage/album/atom" target="_blank" rel="noopener" title="Soundtrack 'ATOM' von Enzo Cage auf Audiomack anhören">
+        <span class="ost-note">♫</span>
+        <span>
+          SOUNDTRACK: <b>ATOM</b> — ENZO CAGE
+          <span class="ost-sub">▶ JETZT AUF AUDIOMACK HÖREN</span>
+        </span>
+      </a>
+
 
       <!-- Help Modal Panel Overlay -->
       <div id="help-panel" class="dialog-panel" style="max-height: 80%; width: 90%; max-width: 440px; overflow-y: auto; text-align: left; padding: 20px; font-family: var(--font-ui); line-height: 1.5; font-size: 13px; color: #fff;">
@@ -797,6 +853,7 @@
           <label for="chk-music">Musik</label>
           <input type="range" id="vol-music" min="0" max="100" value="100" style="width:60px; vertical-align:middle; margin-left:6px;">
           <button id="btn-next-music" style="background: rgba(124, 252, 0, 0.1); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); font-size: 10px; padding: 2px 6px; margin-left: 6px; cursor: pointer; border-radius: 4px;">Next MP3</button>
+          <a href="https://audiomack.com/enzocage/album/atom" target="_blank" rel="noopener" style="color: var(--primary); font-family: var(--font-ui); font-size: 10px; margin-left: 8px; text-decoration: none; border-bottom: 1px dotted var(--primary);" title="Album 'ATOM' auf Audiomack">♫ Album: ATOM</a>
         </div>
         <div class="ctrl-item">
           <input type="checkbox" id="chk-sfx" checked>

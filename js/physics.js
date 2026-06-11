@@ -6,6 +6,14 @@ export function showNotification(msg) {
   state.textPromptTimer = 2.0;
 }
 
+// Floating world-space text that rises and fades (score awards, pickups)
+export function addScorePopup(x, y, text, color) {
+  state.scorePopups.push({
+    x, y, text, color: color || "#ffee44",
+    vy: -16, life: 1.1, maxLife: 1.1
+  });
+}
+
 export function loadLevel(levelData) {
   state.activeLevel = JSON.parse(JSON.stringify(levelData));
   
@@ -32,6 +40,10 @@ export function loadLevel(levelData) {
   state.debris = [];
   state.reactorTimer = 0;
   state.paused = false;
+  state.scorePopups = [];
+  state.shipTrail = [];
+  state.levelIntroTimer = 3.0;
+  state.levelIntroName = state.activeLevel.name || "";
   state.cam.x = state.ship.x;
   state.cam.y = state.ship.y;
 
@@ -797,9 +809,10 @@ function updateProjectiles(dt) {
             spawnShockwave(ent.x, ent.y, ent.type === "reactor" ? "#7CFC00" : "#ff5500");
             if (ent.type === "turret") {
               playSFX("turretDestroyed");
+              playSFX("scorePop");
               state.score += 750;
-              showNotification("+750 ABWEHRTURM");
-            } 
+              addScorePopup(ent.x, ent.y - 12, "+750", "#ffee44");
+            }
             else if (ent.type === "fuel") {
               playSFX("explosion");
               showNotification("SPEICHER ZERSTÖRT!");
@@ -807,6 +820,8 @@ function updateProjectiles(dt) {
             else if (ent.type === "reactor") {
               state.score += 1500;
               state.reactorTimer = 10.0;
+              playSFX("scorePop");
+              addScorePopup(ent.x, ent.y - 16, "+1500", "#ff66ff");
               showNotification("REAKTOR OVERLOAD: 10 SEK!");
             }
             buildCollisionGrid();
@@ -914,6 +929,7 @@ function updateEntities(dt) {
         playSFX("podAttach");
         spawnSparks(state.pod.x, state.pod.y, "#00ffff", 12);
         spawnShockwave(state.pod.x, state.pod.y, "#00ffff");
+        addScorePopup(state.pod.x, state.pod.y - 12, "GEKOPPELT!", "#00ffff");
         showNotification("PENDEL GEKOPPELT!");
         state.ship.tractorTarget = null;
       }

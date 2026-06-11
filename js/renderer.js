@@ -1,5 +1,5 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, STATE_EDITOR, STATE_HIGHSCORE, THEMES, TITLE_MENU_ITEMS } from './constants.js?v=2';
-import { drawVectorChar, drawVectorText } from './vectorFont.js?v=2';
+import { drawVectorChar, drawVectorText, drawWavyText, drawTypewriterText, drawDropInText } from './vectorFont.js?v=2';
 
 // Organic animation — Baba Is You style variant cycling every 200ms
 let animTick = 0;
@@ -40,6 +40,16 @@ export function drawWireframePlanet(ctx, cx, cy, radius, rotation, color) {
 
 export function renderGame(canvas, ctx) {
   tickAnimation();
+
+  // Detect state changes up-front so entrance animations (drop-in text,
+  // tally count-ups) get a correct start timestamp on their first frame
+  if (state.gameState !== state.lastGameState) {
+    state.lastGameState = state.gameState;
+    state.stateEnterTime = Date.now();
+    state.transitionTimer = 0.55;
+    state.transitionVariant = Math.floor(Math.random() * 5);
+  }
+
   const dpr = window.devicePixelRatio || 1;
   const scaleX = canvas.width / 320;
   const scaleY = canvas.height / 200;
@@ -506,6 +516,57 @@ export function renderGame(canvas, ctx) {
     }
   }
 
+  // 5b. Ship ghost trail: fading afterimage outlines along the flight path
+  if (state.shipTrail.length > 0) {
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+    for (const g of state.shipTrail) {
+      const a = Math.max(0, g.life / g.maxLife);
+      ctx.globalAlpha = a * 0.28;
+      ctx.strokeStyle = objColor;
+      ctx.save();
+      ctx.translate(g.x, g.y);
+      ctx.rotate(g.angle);
+      const sc = 0.6 + a * 0.4; // shrink as it fades
+      ctx.scale(sc, sc);
+      ctx.beginPath();
+      ctx.moveTo(6, 0);
+      ctx.lineTo(-4, -4);
+      ctx.lineTo(-2, 0);
+      ctx.lineTo(-4, 4);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // 5c. Speed lines streaking past when the ship is really moving
+  if (state.ship.alive && state.gameState === STATE_PLAYING) {
+    const spd = Math.hypot(state.ship.vx, state.ship.vy);
+    if (spd > 1.9) {
+      ctx.save();
+      ctx.shadowBlur = 0;
+      const inten = Math.min(1, (spd - 1.9) / 1.6);
+      ctx.strokeStyle = `rgba(200, 255, 220, ${0.10 + inten * 0.18})`;
+      ctx.lineWidth = 0.5;
+      const nvx = state.ship.vx / spd;
+      const nvy = state.ship.vy / spd;
+      for (let sl = 0; sl < 5; sl++) {
+        const off = (sl - 2) * 9 + (Math.random() - 0.5) * 4;
+        const ox = -nvy * off + state.ship.x - nvx * (8 + Math.random() * 22);
+        const oy = nvx * off + state.ship.y - nvy * (8 + Math.random() * 22);
+        const len = 8 + inten * 14 * Math.random();
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox - nvx * len, oy - nvy * len);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   // 6. Draw Spaceship
   if (state.ship.alive) {
     ctx.save();
@@ -749,6 +810,27 @@ export function renderGame(canvas, ctx) {
   }
   ctx.restore();
 
+  // 10b. Floating score popup texts (world space, rise + pop + fade)
+  if (state.scorePopups.length > 0) {
+    ctx.save();
+    ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+    for (const sp of state.scorePopups) {
+      const a = Math.max(0, sp.life / sp.maxLife);
+      // quick pop-in scale at birth, settle to 1
+      const age = sp.maxLife - sp.life;
+      const popScale = age < 0.15 ? 0.5 + (age / 0.15) * 0.5 : 1;
+      const size = 0.34 * popScale;
+      const w = sp.text.length * size * 10;
+      ctx.globalAlpha = Math.min(1, a * 1.6);
+      if (state.useBloom) {
+        ctx.shadowBlur = 4 * dpr;
+        ctx.shadowColor = sp.color;
+      }
+      drawVectorText(ctx, sp.text, sp.x - w / 2, sp.y, size, sp.color);
+    }
+    ctx.restore();
+  }
+
   // 11. Editor Helpers
   if (state.gameState === STATE_EDITOR) {
     renderEditorHelpers(ctx, dpr, scaleX, scaleY);
@@ -766,6 +848,32 @@ export function renderGame(canvas, ctx) {
 
   if (state.gameState === STATE_PLAYING || state.gameState === STATE_LEVEL_COMPLETE || state.gameState === STATE_GAME_OVER) {
     renderHUD(ctx, dpr, scaleX, scaleY);
+  }
+
+  // Level intro banner: typewriter level name framed by expanding rule lines
+  if (state.levelIntroTimer > 0 && state.gameState === STATE_PLAYING && state.levelIntroName) {
+    const introT = 3.0 - state.levelIntroTimer; // elapsed
+    const fadeOut = state.levelIntroTimer < 0.5 ? state.levelIntroTimer / 0.5 : 1;
+    ctx.save();
+    ctx.globalAlpha = fadeOut;
+    ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+    const name = state.levelIntroName.toUpperCase();
+    const size = 0.5;
+    const w = name.length * size * 10;
+    const cx2 = 160 - w / 2;
+    // Expanding horizontal rule lines above/below
+    const ruleW = Math.min(1, introT / 0.4) * (w / 2 + 18);
+    ctx.strokeStyle = "rgba(124, 252, 0, 0.55)";
+    ctx.beginPath();
+    ctx.moveTo(160 - ruleW, 52); ctx.lineTo(160 + ruleW, 52);
+    ctx.moveTo(160 - ruleW, 70); ctx.lineTo(160 + ruleW, 70);
+    ctx.stroke();
+    if (state.useBloom) {
+      ctx.shadowBlur = 5 * dpr;
+      ctx.shadowColor = "#7CFC00";
+    }
+    drawTypewriterText(ctx, name, cx2, 57, size, "#7CFC00", (introT - 0.3) / 1.0);
+    ctx.restore();
   }
 
   // Flashing border red screen indicator during meltdown countdown
@@ -828,11 +936,6 @@ export function renderGame(canvas, ctx) {
   }
 
   // Screen transition: one of 5 randomized trash bursts on EVERY state change
-  if (state.gameState !== state.lastGameState) {
-    state.lastGameState = state.gameState;
-    state.transitionTimer = 0.55;
-    state.transitionVariant = Math.floor(Math.random() * 5);
-  }
   if (state.transitionTimer > 0) {
     const ta = state.transitionTimer / 0.55;
     ctx.save();
@@ -934,8 +1037,31 @@ export function renderGame(canvas, ctx) {
   ctx.restore();
 }
 
+let hudLastScore = 0;
+let hudScorePulse = 0;
+
 export function renderHUD(ctx, dpr, scaleX, scaleY) {
   const hudColor = THEMES[state.activeLevel.theme]?.hud || "#7CFC00";
+
+  // Score bump: scale-pop whenever points land
+  if (state.score !== hudLastScore) {
+    if (state.score > hudLastScore) hudScorePulse = 1;
+    hudLastScore = state.score;
+  }
+  if (hudScorePulse > 0) hudScorePulse = Math.max(0, hudScorePulse - 0.06);
+
+  // Low fuel danger vignette: red glow creeping in from screen edges
+  if (state.ship.alive && state.ship.fuel < 250 && state.gameState === STATE_PLAYING) {
+    const danger = 1 - state.ship.fuel / 250;
+    const throb = 0.5 + 0.5 * Math.sin(Date.now() * (state.ship.fuel < 100 ? 0.012 : 0.006));
+    ctx.save();
+    const vg = ctx.createRadialGradient(160, 100, 80, 160, 100, 210);
+    vg.addColorStop(0, "rgba(255,0,0,0)");
+    vg.addColorStop(1, `rgba(255, 20, 20, ${danger * 0.22 * (0.5 + throb * 0.5)})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, 320, 200);
+    ctx.restore();
+  }
   
   ctx.strokeStyle = hudColor;
   ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
@@ -975,7 +1101,9 @@ export function renderHUD(ctx, dpr, scaleX, scaleY) {
     ctx.stroke();
   }
   ctx.restore();
-  drawVectorText(ctx, `SCORE: ${state.score.toString().padStart(6, '0')}`, 205, 8, 0.28, hudColor);
+  const scoreSize = 0.28 * (1 + hudScorePulse * 0.35);
+  const scoreCol = hudScorePulse > 0.4 ? "#ffff66" : hudColor;
+  drawVectorText(ctx, `SCORE: ${state.score.toString().padStart(6, '0')}`, 205, 8 - hudScorePulse * 1.2, scoreSize, scoreCol);
 
   // Mini Radar
   const rx = 145;
@@ -1007,16 +1135,28 @@ export function renderTitleScreen(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.fillRect(0, 0, 320, 200);
 
-  // Pulsing glow behind the title
+  // Pulsing glow behind the title — letters bob on a slow sine wave
   const titlePulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.002);
+  const titleElapsed = (Date.now() - state.stateEnterTime) / 1000;
   ctx.save();
   if (state.useBloom) {
     ctx.shadowBlur = 8 + titlePulse * 10;
     ctx.shadowColor = "#7CFC00";
   }
-  drawVectorText(ctx, "SCHUBKRAFT", 90, 34, 1.4, "#7CFC00");
+  if (titleElapsed < 1.4) {
+    // Entrance: letters drop in with a bounce
+    drawDropInText(ctx, "SCHUBKRAFT", 90, 34, 1.4, "#7CFC00", titleElapsed, { stagger: 0.07, dur: 0.5 });
+  } else {
+    drawWavyText(ctx, "SCHUBKRAFT", 90, 34, 1.4, "#7CFC00", { amp: 1.6, speed: 0.003, phase: 0.5 });
+  }
   ctx.restore();
-  drawVectorText(ctx, "HTML5 SPECIAL EDITION", 68, 64, 0.32, "#ffffff");
+  // Subtitle shimmer: one bright letter sweeps across repeatedly
+  const shimmerIdx = Math.floor((Date.now() / 90) % 34);
+  const subtitle = "HTML5 SPECIAL EDITION";
+  for (let i = 0; i < subtitle.length; i++) {
+    const lit = Math.abs(i - shimmerIdx) < 2;
+    drawVectorChar(ctx, subtitle[i], 68 + i * 3.2, 64, 0.32, 0.32, lit ? "#caffca" : "#ffffff");
+  }
 
   // Tiny demo ship flying across the title screen with flame
   const flyT = (Date.now() % 9000) / 9000;
@@ -1039,13 +1179,41 @@ export function renderTitleScreen(ctx) {
   ctx.stroke();
   ctx.restore();
 
+  // Menu: smooth-sliding selector bar with pulsing chevron + breathing item
+  if (renderTitleScreen._selY === undefined) renderTitleScreen._selY = state.titleMenuIndex;
+  renderTitleScreen._selY += (state.titleMenuIndex - renderTitleScreen._selY) * 0.25;
+  const selSlide = renderTitleScreen._selY;
+  const menuPulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
+
+  // Sliding highlight bar behind the selected entry
+  ctx.save();
+  ctx.fillStyle = `rgba(124, 252, 0, ${0.05 + menuPulse * 0.05})`;
+  ctx.fillRect(78, 85.5 + selSlide * 14, 130, 11);
+  ctx.strokeStyle = `rgba(124, 252, 0, ${0.18 + menuPulse * 0.15})`;
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(78, 85.5 + selSlide * 14, 130, 11);
+  ctx.restore();
+
   for (let i = 0; i < TITLE_MENU_ITEMS.length; i++) {
     const item = TITLE_MENU_ITEMS[i];
     const isSelected = i === state.titleMenuIndex;
     const color = isSelected ? "#7CFC00" : "#777777";
-    const prefix = isSelected ? "▶ " : "  ";
-    drawVectorText(ctx, prefix + item, 84, 88 + i * 14, 0.32, color);
+    drawVectorText(ctx, item, 90, 88 + i * 14, 0.32, color);
   }
+  // Bobbing chevron riding the slide position
+  const chevX = 82 + Math.sin(Date.now() * 0.008) * 1.5;
+  const chevY = 91.5 + selSlide * 14;
+  ctx.save();
+  ctx.strokeStyle = "#7CFC00";
+  if (state.useBloom) { ctx.shadowBlur = 4; ctx.shadowColor = "#7CFC00"; }
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(chevX, chevY - 2.5);
+  ctx.lineTo(chevX + 4, chevY);
+  ctx.lineTo(chevX, chevY + 2.5);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
 
   // active audio check overlay warning prompt
   const audioContextState = window.audioContextActiveState || false;
@@ -1064,11 +1232,29 @@ export function renderGameOverScreen(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, 320, 200);
 
-  drawVectorText(ctx, "GAME OVER", 95, 80, 0.95, "#ff3333");
-  drawVectorText(ctx, `FINAL SCORE: ${state.score}`, 95, 110, 0.35, "#ffffff");
-  
+  const goElapsed = (Date.now() - state.stateEnterTime) / 1000;
+
+  // Letters slam in one by one, then sit with an unstable red flicker
+  ctx.save();
+  if (state.useBloom) { ctx.shadowBlur = 7; ctx.shadowColor = "#ff3333"; }
+  if (goElapsed < 1.2) {
+    drawDropInText(ctx, "GAME OVER", 95, 80, 0.95, "#ff3333", goElapsed, { stagger: 0.09, dur: 0.4 });
+  } else {
+    const flicker = Math.random() < 0.06 ? "#ffffff" : "#ff3333";
+    const jx = Math.random() < 0.04 ? (Math.random() - 0.5) * 2 : 0;
+    drawVectorText(ctx, "GAME OVER", 95 + jx, 80, 0.95, flicker);
+  }
+  ctx.restore();
+
+  // Score counts up from 0 after the title lands
+  const countP = Math.max(0, Math.min(1, (goElapsed - 1.0) / 1.2));
+  const shownScore = Math.floor(state.score * (1 - Math.pow(1 - countP, 3)));
+  if (goElapsed > 0.9) {
+    drawVectorText(ctx, `FINAL SCORE: ${shownScore}`, 95, 110, 0.35, countP < 1 ? "#ffff88" : "#ffffff");
+  }
+
   const blink = Math.floor(Date.now() / 450) % 2 === 0;
-  if (blink) {
+  if (blink && goElapsed > 2.0) {
     drawVectorText(ctx, "SPACE FUER HIGHSCORE REGISTRY", 58, 140, 0.32, "#7CFC00");
   }
 }
@@ -1093,16 +1279,60 @@ export function renderLevelCompleteScreen(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, 320, 200);
 
-  drawVectorText(ctx, "PLANET FLUCHT ERFOLGREICH!", 50, 50, 0.42, "#7CFC00");
-  
+  const lcElapsed = (Date.now() - state.stateEnterTime) / 1000;
+
+  // Procedural confetti rain (deterministic per index — no extra state)
+  ctx.save();
+  const confCols = ["#7CFC00", "#ffee44", "#00ffff", "#ff66ff", "#ff8844"];
+  for (let i = 0; i < 50; i++) {
+    const seed = i * 127.31;
+    const cxp = ((seed * 7.13) % 320 + 320) % 320;
+    const fallSpeed = 26 + (seed % 30);
+    const cyp = ((seed * 3.7) % 200 + lcElapsed * fallSpeed) % 220 - 10;
+    const sway = Math.sin(lcElapsed * 3 + i) * 6;
+    const rot = lcElapsed * (2 + (i % 4)) + i;
+    ctx.save();
+    ctx.translate(cxp + sway, cyp);
+    ctx.rotate(rot);
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = confCols[i % confCols.length];
+    ctx.fillRect(-1.4, -0.8, 2.8, 1.6);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Headline waves in celebration
+  ctx.save();
+  if (state.useBloom) { ctx.shadowBlur = 6; ctx.shadowColor = "#7CFC00"; }
+  drawWavyText(ctx, "PLANET FLUCHT ERFOLGREICH!", 50, 50, 0.42, "#7CFC00", { amp: 1.2, speed: 0.005, phase: 0.4 });
+  ctx.restore();
+
   const bonusFuel = Math.ceil(state.ship.fuel);
   const tetherBonus = state.pod.attached ? 2000 : 0;
-  
-  drawVectorText(ctx, `FUEL BONUS: +${bonusFuel}`, 90, 85, 0.32, "#ffffff");
-  drawVectorText(ctx, `TETHER BONUS: +${tetherBonus}`, 90, 100, 0.32, "#ffffff");
-  drawVectorText(ctx, `SCORE: ${state.score}`, 90, 125, 0.35, "#ffff00");
 
-  drawVectorText(ctx, "LADE NAECHSTE MINE...", 85, 160, 0.32, "#888");
+  // Bonuses tally up line by line: fuel first, then tether, then total
+  const tallyEase = (t0, dur) => Math.max(0, Math.min(1, (lcElapsed - t0) / dur));
+  const fuelP = tallyEase(0.4, 0.8);
+  const tethP = tallyEase(1.3, 0.6);
+  const fuelShown = Math.floor(bonusFuel * fuelP);
+  const tethShown = Math.floor(tetherBonus * tethP);
+
+  if (lcElapsed > 0.4) {
+    drawVectorText(ctx, `FUEL BONUS: +${fuelShown}`, 90, 85, 0.32, fuelP < 1 ? "#ffff88" : "#ffffff");
+  }
+  if (lcElapsed > 1.3) {
+    drawVectorText(ctx, `TETHER BONUS: +${tethShown}`, 90, 100, 0.32, tethP < 1 ? "#ffff88" : "#ffffff");
+  }
+  if (lcElapsed > 2.0) {
+    const scorePulse = 1 + 0.08 * Math.sin(Date.now() * 0.01);
+    drawVectorText(ctx, `SCORE: ${state.score}`, 90, 125, 0.35 * scorePulse, "#ffff00");
+  }
+
+  if (lcElapsed > 2.5) {
+    // Loading dots animate: . .. ...
+    const dots = ".".repeat(1 + Math.floor((Date.now() / 400) % 3));
+    drawVectorText(ctx, `LADE NAECHSTE MINE${dots}`, 85, 160, 0.32, "#888");
+  }
 }
 
 export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {

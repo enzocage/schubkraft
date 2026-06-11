@@ -51,7 +51,9 @@ export const VECTOR_FONT = {
   '<': [6,1, 2,4,  2,4, 6,7],
   '=': [2,3, 6,3,  2,5, 6,5],
   '_': [2,8, 6,8],
-  '★': [4,0, 5,3,  8,3, 5,5,  6,8, 4,6,  2,8, 3,5,  0,3, 3,3]
+  '★': [4,0, 5,3,  8,3, 5,5,  6,8, 4,6,  2,8, 3,5,  0,3, 3,3],
+  '♪': [5,0, 5,6,  5,0, 7,1,  7,1, 7,3,  3,6, 5,6,  3,6, 3,8,  3,8, 5,8,  5,8, 5,6],
+  '—': [1,4, 7,4]
 };
 
 export function drawVectorChar(ctx, char, x, y, scaleX, scaleY, color) {
@@ -73,5 +75,61 @@ export function drawVectorText(ctx, text, x, y, size, color) {
   const spacing = size * 10;
   for (let i = 0; i < text.length; i++) {
     drawVectorChar(ctx, text[i], x + i * spacing, y, size, size, color);
+  }
+}
+
+// Animated typography: per-letter sine wave bounce with optional
+// rainbow shimmer and scale pulse. opts: {amp, speed, phase, rainbow, pulse}
+export function drawWavyText(ctx, text, x, y, size, color, opts = {}) {
+  const spacing = size * 10;
+  const t = Date.now() * (opts.speed !== undefined ? opts.speed : 0.005);
+  const amp = opts.amp !== undefined ? opts.amp : size * 2.2;
+  const phaseStep = opts.phase !== undefined ? opts.phase : 0.55;
+  for (let i = 0; i < text.length; i++) {
+    const ph = t + i * phaseStep;
+    const dy = Math.sin(ph) * amp;
+    const s = size * (opts.pulse ? 1 + Math.sin(ph * 1.3) * 0.07 : 1);
+    let col = color;
+    if (opts.rainbow) {
+      const hue = (i * 26 + Date.now() * 0.05) % 360;
+      col = `hsl(${hue}, 100%, 68%)`;
+    }
+    drawVectorChar(ctx, text[i], x + i * spacing, y + dy - (s - size) * 4, s, s, col);
+  }
+}
+
+// Typewriter reveal: shows the first `progress * text.length` chars
+// plus a blinking block cursor at the write position.
+export function drawTypewriterText(ctx, text, x, y, size, color, progress) {
+  const spacing = size * 10;
+  const shown = Math.floor(Math.max(0, Math.min(1, progress)) * text.length);
+  for (let i = 0; i < shown; i++) {
+    drawVectorChar(ctx, text[i], x + i * spacing, y, size, size, color);
+  }
+  if (shown < text.length && Math.floor(Date.now() / 160) % 2 === 0) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.fillRect(x + shown * spacing + size, y, size * 6, size * 8);
+    ctx.restore();
+  }
+}
+
+// Per-letter drop-in with overshoot bounce. elapsed in seconds since
+// the animation started; letters cascade with a small stagger.
+export function drawDropInText(ctx, text, x, y, size, color, elapsed, opts = {}) {
+  const spacing = size * 10;
+  const stagger = opts.stagger !== undefined ? opts.stagger : 0.06;
+  const dur = opts.dur !== undefined ? opts.dur : 0.45;
+  for (let i = 0; i < text.length; i++) {
+    const p = Math.max(0, Math.min(1, (elapsed - i * stagger) / dur));
+    if (p <= 0) continue;
+    // ease-out back (slight overshoot)
+    const c = 1.7;
+    const e = 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2);
+    const dy = (1 - e) * -46;
+    ctx.save();
+    ctx.globalAlpha *= Math.min(1, p * 2.5);
+    drawVectorChar(ctx, text[i], x + i * spacing, y + dy, size, size, color);
+    ctx.restore();
   }
 }

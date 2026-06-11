@@ -132,6 +132,13 @@ const SFX_TEMPLATES = {
     arp: { offsets: [0, -5], speed: 4 },
     filter: { mode: "bp", cutoff: 0.5, sweep: 0, res: 5 }, frames: { len: 10 }
   },
+  // ===== SCORE POP — Bright coin blip rising major arp =====
+  scorePop: {
+    priority: 1, wave: "pulse", pw: { start: 1600, speed: 120 },
+    adsr: [0, 3, 2, 3], pitch: { startNote: "C-6", slide: 6, curve: "linear" },
+    arp: { offsets: [0, 7, 12], speed: 1 },
+    filter: { mode: "hp", cutoff: 0.10, sweep: 0.01, res: 2 }, frames: { len: 9 }
+  },
   // ===== MENU SELECT — Crisp blip with sparkle =====
   select: {
     priority: 2, wave: "pulse", pw: { start: 800, speed: 200 },
@@ -617,8 +624,8 @@ export async function playNextTrack() {
       .replace(/^enzo_cage_/, "")
       .replace(/_/g, " ")
       .toUpperCase();
-    state.musicTitleTimer = 0.5;
-    state.musicTitleMessage = cleanedTitle;
+    state.musicTitleTimer = 2.2;
+    state.musicTitleMessage = `♪ ${cleanedTitle} — ALBUM: ATOM`;
   } catch (err) {
     console.error("Failed to play next track: " + track, err);
   }

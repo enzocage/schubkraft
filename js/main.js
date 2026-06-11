@@ -149,6 +149,35 @@ function updateVisualEffects(dt) {
   if (state.transitionTimer > 0) {
     state.transitionTimer = Math.max(0, state.transitionTimer - dt);
   }
+  if (state.levelIntroTimer > 0) {
+    state.levelIntroTimer = Math.max(0, state.levelIntroTimer - dt);
+  }
+
+  // Floating score popup texts: rise, decelerate, fade
+  for (let i = state.scorePopups.length - 1; i >= 0; i--) {
+    const sp = state.scorePopups[i];
+    sp.y += sp.vy * dt;
+    sp.vy *= 0.94;
+    sp.life -= dt;
+    if (sp.life <= 0) state.scorePopups.splice(i, 1);
+  }
+
+  // Ship ghost trail: record afterimages while moving fast
+  if (state.gameState === STATE_PLAYING && state.ship.alive) {
+    const spd = Math.hypot(state.ship.vx, state.ship.vy);
+    if (spd > 1.0) {
+      state.shipTrail.push({
+        x: state.ship.x, y: state.ship.y,
+        angle: state.ship.visualAngle,
+        life: 0.30, maxLife: 0.30
+      });
+      if (state.shipTrail.length > 24) state.shipTrail.shift();
+    }
+  }
+  for (let i = state.shipTrail.length - 1; i >= 0; i--) {
+    state.shipTrail[i].life -= dt;
+    if (state.shipTrail[i].life <= 0) state.shipTrail.splice(i, 1);
+  }
 
   // Parallax moon rotation drift
   state.rotateMoon += dt * 0.04;
@@ -334,6 +363,13 @@ function coreGameLoop(time) {
     if (musicPlayBtn) musicPlayBtn.style.display = musicBtnShouldShow ? "flex" : "none";
   }
 
+  // Soundtrack promo badge only on the title screen
+  const ostShouldShow = state.gameState === STATE_TITLE;
+  if (ostShouldShow !== ostPromoShown) {
+    ostPromoShown = ostShouldShow;
+    if (ostPromoBadge) ostPromoBadge.style.display = ostShouldShow ? "flex" : "none";
+  }
+
   renderGame(canvas, ctx);
   requestAnimationFrame(coreGameLoop);
 }
@@ -384,6 +420,16 @@ if (chkMusic) {
 // In-game music toggle (bottom right, play mode only — shown/hidden by the game loop)
 const musicPlayBtn = document.getElementById("btn-music-play-toggle");
 let musicPlayBtnShown = false;
+
+// Soundtrack promo badge (Audiomack album link, title screen only)
+const ostPromoBadge = document.getElementById("soundtrack-promo");
+let ostPromoShown = false;
+if (ostPromoBadge) {
+  ostPromoBadge.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't trigger canvas/game inputs
+    playSFX("select");
+  });
+}
 
 function refreshMusicPlayBtn() {
   if (!musicPlayBtn) return;
