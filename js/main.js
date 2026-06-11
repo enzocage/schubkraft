@@ -18,6 +18,7 @@ import {
   updateTractorSound,
   updateSequencer,
   updateMusicVolume,
+  playNextTrack,
   playSFX
 } from './audio.js';
 
@@ -41,6 +42,7 @@ import {
 import {
   toggleEditor,
   triggerEditorUndo,
+  triggerEditorRedo,
   saveEditorUndoState,
   populateEntityProperties,
   handleEditorClick
@@ -211,35 +213,37 @@ function updateVisualEffects(dt) {
     }
   }
 
-  // Spawning continuous orange thruster rocket sparks
+  // Spawning spectacular orange/yellow thruster rocket sparks
   if (state.keys.thrust && state.ship.fuel > 0 && state.ship.alive && state.gameState === STATE_PLAYING) {
-    if (Math.random() < 0.4) {
-      // Drifting gray exhaust smoke
-      const smokeLife = Math.random() * 0.8 + 0.4;
+    if (Math.random() < 0.65) {
+      // Drifting larger gray/purple exhaust smoke puffs
+      const smokeLife = Math.random() * 1.0 + 0.5;
       state.particles.push({
         x: state.ship.x - Math.cos(state.ship.angle) * 6,
         y: state.ship.y - Math.sin(state.ship.angle) * 6,
-        vx: -Math.cos(state.ship.angle) * 0.3 + (Math.random() - 0.5) * 0.3,
-        vy: -Math.sin(state.ship.angle) * 0.3 + (Math.random() - 0.5) * 0.3 - 0.1,
-        color: "rgba(160,160,170,0.5)",
-        life: smokeLife, maxLife: smokeLife, size: 1.4
+        vx: -Math.cos(state.ship.angle) * 0.45 + (Math.random() - 0.5) * 0.3,
+        vy: -Math.sin(state.ship.angle) * 0.45 + (Math.random() - 0.5) * 0.3 - 0.1,
+        color: Math.random() < 0.4 ? "rgba(160,160,175,0.4)" : "rgba(110,90,130,0.25)",
+        life: smokeLife, maxLife: smokeLife, size: Math.random() * 3.5 + 1.5
       });
     }
-    if (Math.random() < 0.85) {
+    // Generate multiple sparks per frame for full exhaust cone
+    const sparkCount = Math.random() < 0.5 ? 2 : 3;
+    for (let sp = 0; sp < sparkCount; sp++) {
       const nozzleX = state.ship.x - Math.cos(state.ship.angle) * 4;
       const nozzleY = state.ship.y - Math.sin(state.ship.angle) * 4;
-      const angleSpread = state.ship.angle + Math.PI + (Math.random() - 0.5) * 0.5;
-      const spd = Math.random() * 1.6 + 0.6;
-      const sparkLife = Math.random() * 0.35 + 0.12;
+      const angleSpread = state.ship.angle + Math.PI + (Math.random() - 0.5) * 0.45;
+      const spd = Math.random() * 2.2 + 0.8;
+      const sparkLife = Math.random() * 0.42 + 0.15;
       state.particles.push({
         x: nozzleX,
         y: nozzleY,
-        vx: Math.cos(angleSpread) * spd + state.ship.vx * 0.2,
-        vy: Math.sin(angleSpread) * spd + state.ship.vy * 0.2,
-        color: Math.random() < 0.3 ? "#ffcc44" : "#ff6600",
+        vx: Math.cos(angleSpread) * spd + state.ship.vx * 0.35,
+        vy: Math.sin(angleSpread) * spd + state.ship.vy * 0.35,
+        color: Math.random() < 0.2 ? "#ffffff" : (Math.random() < 0.5 ? "#ffcc33" : "#ff4500"),
         life: sparkLife,
         maxLife: sparkLife,
-        size: 1.0
+        size: Math.random() * 2.0 + 0.5
       });
     }
   }
@@ -322,48 +326,264 @@ function coreGameLoop(time) {
 // ==========================================
 
 // CRT Scanlines toggler
-document.getElementById("chk-crt").addEventListener("change", (e) => {
-  const overlay = document.getElementById("crt-overlay");
-  const vignette = document.getElementById("crt-vignette");
-  const cab = document.getElementById("cabinet-bezel");
-  if (e.target.checked) {
-    overlay.classList.remove("disabled");
-    vignette.style.boxShadow = "inset 0 0 100px rgba(0,0,0,0.95)";
-    cab.style.borderRadius = "20px";
-  } else {
-    overlay.classList.add("disabled");
-    vignette.style.boxShadow = "none";
-    cab.style.borderRadius = "0";
-  }
-});
+const chkCrt = document.getElementById("chk-crt");
+if (chkCrt) {
+  chkCrt.addEventListener("change", (e) => {
+    const overlay = document.getElementById("crt-overlay");
+    const vignette = document.getElementById("crt-vignette");
+    const cab = document.getElementById("cabinet-bezel");
+    if (overlay && vignette && cab) {
+      if (e.target.checked) {
+        overlay.classList.remove("disabled");
+        vignette.style.boxShadow = "inset 0 0 100px rgba(0,0,0,0.95)";
+        cab.style.borderRadius = "20px";
+      } else {
+        overlay.classList.add("disabled");
+        vignette.style.boxShadow = "none";
+        cab.style.borderRadius = "0";
+      }
+    }
+  });
+}
 
 // Vector Bloom / Glow toggler
-document.getElementById("chk-bloom").addEventListener("change", (e) => {
-  state.useBloom = e.target.checked;
-});
+const chkBloom = document.getElementById("chk-bloom");
+if (chkBloom) {
+  chkBloom.addEventListener("change", (e) => {
+    state.useBloom = e.target.checked;
+  });
+}
 
 // Music / sound toggle checkboxes
-document.getElementById("chk-music").addEventListener("change", (e) => {
-  state.musicEnabled = e.target.checked;
-  updateMusicVolume();
-});
+const chkMusic = document.getElementById("chk-music");
+if (chkMusic) {
+  chkMusic.addEventListener("change", (e) => {
+    state.musicEnabled = e.target.checked;
+    updateMusicVolume();
+  });
+}
 
-document.getElementById("vol-music").addEventListener("input", (e) => {
-  state.musicVolume = parseInt(e.target.value) / 100;
-  updateMusicVolume();
-});
+const volMusic = document.getElementById("vol-music");
+if (volMusic) {
+  volMusic.addEventListener("input", (e) => {
+    state.musicVolume = parseInt(e.target.value) / 100;
+    updateMusicVolume();
+  });
+}
 
-document.getElementById("chk-sfx").addEventListener("change", (e) => {
-  state.sfxEnabled = e.target.checked;
-});
+const chkSfx = document.getElementById("chk-sfx");
+if (chkSfx) {
+  chkSfx.addEventListener("change", (e) => {
+    state.sfxEnabled = e.target.checked;
+  });
+}
+
+// Next track button
+const btnNextMusic = document.getElementById("btn-next-music");
+if (btnNextMusic) {
+  btnNextMusic.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    playNextTrack();
+  });
+}
+
+// Toggle HUD settings overlay
+let hudUserOpened = false;
+const hudPanel = document.getElementById("external-controls");
+
+const toggleHUD = (e) => {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  hudUserOpened = !hudUserOpened;
+  if (hudPanel) {
+    if (hudUserOpened) {
+      hudPanel.classList.add("active");
+    } else {
+      hudPanel.classList.remove("active");
+    }
+  }
+};
+
+const btnToggleHUD = document.getElementById("btn-toggle-hud");
+if (btnToggleHUD) {
+  btnToggleHUD.addEventListener("click", toggleHUD);
+}
+
+// Toggle Help overlay window
+let helpOpened = false;
+const helpPanel = document.getElementById("help-panel");
+
+const toggleHelp = (e) => {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  helpOpened = !helpOpened;
+  if (helpPanel) {
+    if (helpOpened) {
+      helpPanel.style.display = "block";
+      if (state.gameState === STATE_PLAYING) {
+        state.paused = true;
+      }
+      playSFX("select");
+    } else {
+      helpPanel.style.display = "none";
+    }
+  }
+};
+
+const btnHelp = document.getElementById("btn-help");
+if (btnHelp) {
+  btnHelp.addEventListener("click", toggleHelp);
+}
+
+const btnCloseHelp = document.getElementById("btn-close-help");
+if (btnCloseHelp) {
+  btnCloseHelp.addEventListener("click", toggleHelp);
+}
+
+// Stop help panel clicks from triggering game inputs
+if (helpPanel) {
+  helpPanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
+// Stop settings panel clicks from triggering game inputs
+if (hudPanel) {
+  hudPanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
+// Bezel top bar MENU button
+const bezelMenuBtn = document.getElementById("btn-bezel-menu");
+if (bezelMenuBtn) {
+  const handleMenuClick = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    playSFX("select");
+    
+    // Deactivate editor HUD sidebar and status overlays completely
+    const edToolbar = document.getElementById("editor-toolbar");
+    if (edToolbar) edToolbar.style.display = "none";
+    const edStatus = document.getElementById("editor-status-bar");
+    if (edStatus) edStatus.style.display = "none";
+    const themeSettings = document.getElementById("theme-settings-panel");
+    if (themeSettings) themeSettings.style.display = "none";
+    const entityProp = document.getElementById("entity-properties-panel");
+    if (entityProp) entityProp.style.display = "none";
+    
+    // Close help overlay
+    if (helpPanel) {
+      helpPanel.style.display = "none";
+    }
+    helpOpened = false;
+    
+    // Return to main menu title screen
+    state.gameState = STATE_TITLE;
+    
+    // Close any other open modals
+    document.querySelectorAll(".dialog-panel").forEach(panel => {
+      panel.style.display = "none";
+    });
+  };
+  bezelMenuBtn.addEventListener("click", handleMenuClick);
+}
+
+// C64 Color Cycling for INSERT COIN
+const C64_COLORS = [
+  "#FF7777", // Light Red
+  "#88FF88", // Light Green
+  "#8888FF", // Light Blue
+  "#EEEE77", // Yellow
+  "#CC44CC", // Purple
+  "#AAFFEE", // Cyan
+  "#DD8855", // Orange
+  "#FFFFFF"  // White
+];
+
+const insertCoinEl = document.getElementById("insert-coin-text");
+if (insertCoinEl) {
+  const text = insertCoinEl.innerText;
+  insertCoinEl.innerHTML = text.split("").map(char => {
+    if (char === " ") return " ";
+    return `<span class="coin-char" style="transition: color 0.1s; font-family: inherit; display: inline-block;">${char}</span>`;
+  }).join("");
+}
+
+let colorCycleFrame = 0;
+let currentPattern = 0;
+const coinChars = document.querySelectorAll(".coin-char");
+
+setInterval(() => {
+  if (coinChars.length === 0) return;
+  colorCycleFrame++;
+  
+  // Change pattern every 60 frames (approx 6 seconds)
+  if (colorCycleFrame % 60 === 0) {
+    currentPattern = (currentPattern + 1) % 4;
+  }
+  
+  coinChars.forEach((charEl, idx) => {
+    let colorIdx = 0;
+    if (currentPattern === 0) {
+      // Rainbow wave
+      colorIdx = (colorCycleFrame + idx) % C64_COLORS.length;
+    } else if (currentPattern === 1) {
+      // Color wash / synchronous blink
+      colorIdx = Math.floor(colorCycleFrame / 2) % C64_COLORS.length;
+    } else if (currentPattern === 2) {
+      // Alternating odd/even letters
+      const isOdd = idx % 2 === 0;
+      colorIdx = (Math.floor(colorCycleFrame / 3) + (isOdd ? 0 : 4)) % C64_COLORS.length;
+    } else if (currentPattern === 3) {
+      // Center-out wave radiating from center
+      const center = (coinChars.length - 1) / 2;
+      const dist = Math.abs(idx - center);
+      colorIdx = (colorCycleFrame - Math.round(dist)) % C64_COLORS.length;
+      if (colorIdx < 0) colorIdx += C64_COLORS.length;
+    }
+    
+    charEl.style.color = C64_COLORS[colorIdx];
+    charEl.style.textShadow = `0 0 6px ${C64_COLORS[colorIdx]}`;
+  });
+}, 100);
+
+// Blink reminder every 200 seconds
+setInterval(() => {
+  if (!hudUserOpened) {
+    hudPanel.classList.add("active");
+    setTimeout(() => {
+      if (!hudUserOpened) {
+        hudPanel.classList.remove("active");
+      }
+    }, 1200); // Fades in and stays visible for about 1 second, then fades out
+  }
+}, 200000);
 
 // ==========================================
 // 6. EDITOR TOOLBAR ACTION BINDINGS
 // ==========================================
 
+function updateStatusModeHUD() {
+  const modeSpan = document.getElementById("status-mode");
+  if (modeSpan) {
+    let text = `MODUS: ${state.editorMode.toUpperCase()}`;
+    if (state.editorMode === "entity") text += ` (${state.selectedEntityPreset.toUpperCase()})`;
+    modeSpan.innerText = text;
+  }
+}
+
 document.getElementById("btn-mode-poly").addEventListener("click", () => {
   state.editorMode = "poly";
   setBtnActive("btn-mode-poly");
+  updateStatusModeHUD();
 });
 
 const entSelect = document.getElementById("entity-select");
@@ -371,6 +591,7 @@ const selectTriggerHandler = () => {
   state.editorMode = "entity";
   state.selectedEntityPreset = entSelect.value;
   setBtnActive("entity-select");
+  updateStatusModeHUD();
 };
 entSelect.addEventListener("change", selectTriggerHandler);
 entSelect.addEventListener("focus", selectTriggerHandler);
@@ -380,6 +601,7 @@ document.getElementById("btn-mode-delete").addEventListener("click", () => {
   state.editorMode = "delete";
   setBtnActive("btn-mode-delete");
   showNotification("LOESCHEN-MODUS AKTIVIERT");
+  updateStatusModeHUD();
 });
 
 document.getElementById("prop-angle-range").addEventListener("input", (e) => {
@@ -431,11 +653,15 @@ document.getElementById("btn-save-properties").addEventListener("click", () => {
 document.getElementById("btn-zoom-in").addEventListener("click", () => {
   state.editorScale = Math.min(2.0, state.editorScale + 0.25);
   showNotification(`ZOOM: ${Math.round(state.editorScale * 100)}%`);
+  const zoomSpan = document.getElementById("status-zoom");
+  if (zoomSpan) zoomSpan.innerText = `ZOOM: ${Math.round(state.editorScale * 100)}%`;
 });
 
 document.getElementById("btn-zoom-out").addEventListener("click", () => {
   state.editorScale = Math.max(0.5, state.editorScale - 0.25);
   showNotification(`ZOOM: ${Math.round(state.editorScale * 100)}%`);
+  const zoomSpan = document.getElementById("status-zoom");
+  if (zoomSpan) zoomSpan.innerText = `ZOOM: ${Math.round(state.editorScale * 100)}%`;
 });
 
 document.getElementById("shape-templates-select").addEventListener("change", (e) => {
@@ -468,6 +694,18 @@ document.getElementById("btn-editor-undo").addEventListener("click", () => {
   triggerEditorUndo();
 });
 
+document.getElementById("btn-editor-redo").addEventListener("click", () => {
+  triggerEditorRedo();
+});
+
+document.getElementById("chk-grid-dots").addEventListener("change", (e) => {
+  state.editorShowGridDots = e.target.checked;
+});
+
+document.getElementById("btn-close-editor").addEventListener("click", () => {
+  toggleEditor(false);
+});
+
 document.getElementById("btn-open-settings").addEventListener("click", () => {
   document.getElementById("level-name-input").value = state.activeLevel.name || "";
   document.getElementById("theme-select").value = state.activeLevel.theme || "c64";
@@ -475,14 +713,20 @@ document.getElementById("btn-open-settings").addEventListener("click", () => {
   document.getElementById("gravity-val").innerText = state.activeLevel.gravity || 0.022;
   document.getElementById("fuel-range").value = state.activeLevel.fuel || 2000;
   document.getElementById("fuel-val").innerText = state.activeLevel.fuel || 2000;
+  document.getElementById("inverted-gravity-chk").checked = !!state.activeLevel.invertedGravity;
+  document.getElementById("exit-y-range").value = state.activeLevel.exitY || 50;
+  document.getElementById("exit-y-val").innerText = state.activeLevel.exitY || 50;
   document.getElementById("theme-settings-panel").style.display = "block";
 });
 
 document.getElementById("btn-save-settings").addEventListener("click", () => {
+  saveEditorUndoState();
   state.activeLevel.name = document.getElementById("level-name-input").value;
   state.activeLevel.theme = document.getElementById("theme-select").value;
   state.activeLevel.gravity = parseFloat(document.getElementById("gravity-range").value);
   state.activeLevel.fuel = parseInt(document.getElementById("fuel-range").value);
+  state.activeLevel.invertedGravity = document.getElementById("inverted-gravity-chk").checked;
+  state.activeLevel.exitY = parseInt(document.getElementById("exit-y-range").value);
   
   const gridVal = parseInt(document.getElementById("grid-snap-select").value);
   if (gridVal === 0) {
@@ -490,6 +734,11 @@ document.getElementById("btn-save-settings").addEventListener("click", () => {
   } else {
     state.snapToGrid = true;
     state.editorGridSize = gridVal;
+  }
+
+  const snapSpan = document.getElementById("status-snap");
+  if (snapSpan) {
+    snapSpan.innerText = state.snapToGrid ? `SNAP: ${state.editorGridSize}px` : "SNAP: FREI";
   }
 
   document.getElementById("theme-settings-panel").style.display = "none";
@@ -502,6 +751,10 @@ document.getElementById("gravity-range").addEventListener("input", (e) => {
 
 document.getElementById("fuel-range").addEventListener("input", (e) => {
   document.getElementById("fuel-val").innerText = e.target.value;
+});
+
+document.getElementById("exit-y-range").addEventListener("input", (e) => {
+  document.getElementById("exit-y-val").innerText = e.target.value;
 });
 
 document.getElementById("btn-test-level").addEventListener("click", () => {

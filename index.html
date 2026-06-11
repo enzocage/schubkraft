@@ -1,8 +1,44 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <script>
+    window.onerror = function(msg, url, line, col, error) {
+      const banner = document.createElement("div");
+      banner.style.position = "fixed";
+      banner.style.top = "0";
+      banner.style.left = "0";
+      banner.style.width = "100%";
+      banner.style.backgroundColor = "#ff2222";
+      banner.style.color = "#ffffff";
+      banner.style.padding = "10px";
+      banner.style.fontFamily = "monospace";
+      banner.style.fontSize = "12px";
+      banner.style.zIndex = "999999";
+      banner.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
+      banner.innerText = `JS ERROR: ${msg}\nAt: ${url}:${line}:${col}`;
+      document.body.appendChild(banner);
+      console.error(error);
+      return false;
+    };
+    window.onunhandledrejection = function(event) {
+      const banner = document.createElement("div");
+      banner.style.position = "fixed";
+      banner.style.top = "0";
+      banner.style.left = "0";
+      banner.style.width = "100%";
+      banner.style.backgroundColor = "#ff8800";
+      banner.style.color = "#ffffff";
+      banner.style.padding = "10px";
+      banner.style.fontFamily = "monospace";
+      banner.style.fontSize = "12px";
+      banner.style.zIndex = "999999";
+      banner.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
+      banner.innerText = `UNHANDLED REJECTION: ${event.reason}`;
+      document.body.appendChild(banner);
+    };
+  </script>
   <title>THRUST — Retro C64 Clone in HTML5</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,7 +106,8 @@
     #canvas-container {
       position: relative;
       width: 100%;
-      height: 100%;
+      flex-grow: 1;
+      height: 0;
       background: #000;
       display: flex;
       justify-content: center;
@@ -91,7 +128,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: none !important;
       z-index: 10;
       /* Interlaced scanline texture */
       background: linear-gradient(
@@ -119,28 +156,28 @@
     }
     #crt-static {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 12;
+      pointer-events: none !important; z-index: 12;
       background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0px, rgba(255,255,255,0.02) 1px, rgba(0,0,0,0.06) 2px);
       background-size: 100% 3px;
       mix-blend-mode: overlay;
       animation: crtFlicker 0.12s infinite;
     }
     #crt-static.disabled { display: none; }
-
+ 
     /* CRT Chromatic Fringe / Bloom */
     #crt-bloom {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 9;
+      pointer-events: none !important; z-index: 9;
       box-shadow: inset 0 0 60px rgba(124,252,0,0.06), inset 0 0 20px rgba(0,0,0,0.7);
     }
-
+ 
     #crt-vignette {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: none !important;
       z-index: 11;
       box-shadow: 
         inset 0 0 100px rgba(0, 0, 0, 0.95),
@@ -148,97 +185,113 @@
       border-radius: 8px;
     }
 
-    /* High-Fidelity Glass UI Toolbar for Level Editor */
-    #editor-toolbar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-top: 1px solid var(--border-color);
-      padding: 12px 20px;
-      display: none;
-      z-index: 25;
-      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-      gap: 12px;
-      z-index: 20;
-      box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
-    }
-
-    .editor-btn {
-      background: rgba(124, 252, 0, 0.08);
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      padding: 10px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      border-radius: 6px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      font-family: var(--font-ui);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .editor-btn:hover, .editor-btn.active {
-      background: var(--primary);
-      color: #000;
-      box-shadow: 0 0 14px rgba(124, 252, 0, 0.6);
-      transform: translateY(-1px);
-    }
-
-    /* Dialog Panel styling */
-    .dialog-panel {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--panel-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 2px solid var(--primary);
-      border-radius: 12px;
-      padding: 24px;
-      width: 90%;
-      max-width: 460px;
-      z-index: 30;
-      display: none;
-      box-shadow: 
-        0 20px 45px rgba(0,0,0,0.7),
-        inset 0 0 20px rgba(124,252,0,0.1);
-    }
-
-    .dialog-title {
-      font-family: var(--font-retro);
-      font-size: 13px;
-      color: var(--primary);
-      margin-bottom: 18px;
-      text-shadow: 0 0 8px rgba(124, 252, 0, 0.5);
-      letter-spacing: 1px;
-    }
-
-    .dialog-body {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    textarea.json-area {
-      width: 100%;
-      height: 180px;
-      background: #020204;
-      border: 1px solid var(--border-color);
-      color: var(--primary);
-      font-family: monospace;
-      font-size: 11px;
-      padding: 12px;
-      border-radius: 6px;
-      resize: none;
-      outline: none;
-    }
+     /* High-Fidelity Glass UI Sidebar for Level Editor */
+     #editor-toolbar {
+       position: absolute;
+       top: 10px;
+       right: 10px;
+       bottom: 10px;
+       width: 175px;
+       background: rgba(10, 10, 20, 0.82);
+       backdrop-filter: blur(14px);
+       -webkit-backdrop-filter: blur(14px);
+       border: 1.5px solid rgba(124, 252, 0, 0.35);
+       border-radius: 10px;
+       padding: 14px 10px;
+       display: none;
+       flex-direction: column;
+       gap: 8px;
+       z-index: 25;
+       box-shadow: 0 0 25px rgba(0,0,0,0.85);
+       overflow-y: auto;
+       max-height: calc(100% - 20px);
+     }
+ 
+     .editor-section-title {
+       font-family: var(--font-retro);
+       font-size: 7.5px;
+       color: rgba(255, 255, 255, 0.5);
+       margin-top: 4px;
+       margin-bottom: 1px;
+       border-bottom: 1px dashed rgba(124, 252, 0, 0.2);
+       padding-bottom: 2px;
+       letter-spacing: 0.5px;
+       text-transform: uppercase;
+     }
+ 
+     .editor-btn {
+       background: rgba(124, 252, 0, 0.08);
+       border: 1px solid var(--border-color);
+       color: var(--primary);
+       padding: 7px 8px;
+       font-size: 11px;
+       font-weight: 700;
+       border-radius: 6px;
+       cursor: pointer;
+       text-align: center;
+       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+       font-family: var(--font-ui);
+       text-transform: uppercase;
+       letter-spacing: 0.5px;
+       width: 100%;
+     }
+ 
+     .editor-btn:hover, .editor-btn.active {
+       background: var(--primary);
+       color: #000;
+       box-shadow: 0 0 12px rgba(124, 252, 0, 0.6);
+       transform: translateY(-1px);
+     }
+ 
+     /* Dialog Panel styling */
+     .dialog-panel {
+       position: absolute;
+       top: 50%;
+       left: 50%;
+       transform: translate(-50%, -50%);
+       background: rgba(10, 10, 20, 0.92);
+       backdrop-filter: blur(20px);
+       -webkit-backdrop-filter: blur(20px);
+       border: 2px solid var(--primary);
+       border-radius: 12px;
+       padding: 24px;
+       width: 90%;
+       max-width: 420px;
+       z-index: 30;
+       display: none;
+       box-shadow: 
+         0 20px 45px rgba(0,0,0,0.85),
+         inset 0 0 20px rgba(124,252,0,0.15);
+     }
+ 
+     .dialog-title {
+       font-family: var(--font-retro);
+       font-size: 13px;
+       color: var(--primary);
+       margin-bottom: 18px;
+       text-shadow: 0 0 8px rgba(124, 252, 0, 0.5);
+       letter-spacing: 1px;
+     }
+ 
+     .dialog-body {
+       display: flex;
+       flex-direction: column;
+       gap: 14px;
+     }
+ 
+     textarea.json-area {
+       width: 100%;
+       height: 180px;
+       background: #020204;
+       border: 1px solid var(--border-color);
+       color: var(--primary);
+       font-family: monospace;
+       font-size: 11px;
+       padding: 12px;
+       border-radius: 6px;
+       resize: none;
+       outline: none;
+     }
 
     /* Invisible Pointer Input Overlays */
     #touch-tutorial {
@@ -291,6 +344,7 @@
       font-family: var(--font-retro);
       font-size: 10px;
       color: #777;
+      flex-shrink: 0;
     }
 
     #bezel-header span.glow {
@@ -298,14 +352,47 @@
       text-shadow: 0 0 5px var(--primary);
     }
 
-    /* Options HUD under Bezel */
+    #btn-bezel-menu:hover {
+      background: var(--primary) !important;
+      color: #000 !important;
+      box-shadow: 0 0 10px var(--primary);
+    }
+
+    /* Options HUD Overlay over Bezel bottom */
     #external-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(124, 252, 0, 0.35);
+      border-radius: 8px;
+      padding: 8px 16px;
       display: flex;
-      gap: 25px;
-      margin-top: 20px;
-      font-size: 13px;
-      color: #999;
-      font-weight: 500;
+      gap: 15px;
+      font-size: 11px;
+      color: #ccc;
+      z-index: 23;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.6);
+      transition: opacity 0.4s, visibility 0.4s;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      align-items: center;
+      width: max-content;
+      max-width: 90%;
+    }
+    #external-controls.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    #btn-toggle-hud:hover, #btn-help:hover {
+      background: var(--primary) !important;
+      color: #000 !important;
+      box-shadow: 0 0 10px rgba(124, 252, 0, 0.6) !important;
     }
 
     .ctrl-item {
@@ -338,9 +425,9 @@
   <!-- Bezel Header Branding -->
   <div id="cabinet-bezel">
     <div id="bezel-header">
-      <span>★ RETRO ARCADE ★</span>
+      <button id="btn-bezel-menu" style="background: rgba(124, 252, 0, 0.08); border: 1px solid var(--border-color); color: var(--primary); font-family: var(--font-retro); font-size: 8px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; outline: none;">MENU</button>
       <span class="glow">THRUST C64 SYSTEM</span>
-      <span>INSERT COIN</span>
+      <span id="insert-coin-text">INSERT COIN</span>
     </div>
     
     <div id="canvas-container">
@@ -473,12 +560,32 @@
             <input type="range" id="fuel-range" min="200" max="5000" step="100" value="2000" style="accent-color: var(--primary);">
             <span id="fuel-val" style="text-align:right; font-weight:bold;">2000</span>
           </label>
+          <label style="display:flex; gap:10px; align-items:center; cursor:pointer; margin-top: 4px;">
+            <input type="checkbox" id="inverted-gravity-chk" style="accent-color: var(--primary);">
+            <span>Umgekehrte Schwerkraft (Inverted)</span>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px;">
+            <span>Flucht-Höhe (Exit Y):</span>
+            <input type="range" id="exit-y-range" min="10" max="790" step="10" value="50" style="accent-color: var(--primary);">
+            <span id="exit-y-val" style="text-align:right; font-weight:bold;">50</span>
+          </label>
           <button id="btn-save-settings" class="editor-btn" style="margin-top: 10px;">Anwenden</button>
         </div>
       </div>
+ 
+      <!-- Editor Status Bar -->
+      <div id="editor-status-bar" style="position: absolute; top: 12px; left: 12px; background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(124, 252, 0, 0.3); border-radius: 6px; padding: 6px 12px; font-family: var(--font-ui); font-size: 11px; color: var(--primary); display: none; pointer-events: none; z-index: 24; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <span id="status-mode">MODUS: POLY-ZEICHNEN</span>
+        <span id="status-coords">X: 0 Y: 0</span>
+        <span id="status-snap">SNAP: 8px</span>
+        <span id="status-zoom">ZOOM: 100%</span>
+      </div>
 
-      <!-- Editor Panel Toolbar -->
+      <!-- Editor Panel Sidebar -->
       <div id="editor-toolbar">
+        <div style="font-family: var(--font-retro); font-size: 9.5px; color: var(--primary); text-align: center; margin-bottom: 5px; text-shadow: 0 0 5px var(--primary); letter-spacing: 0.5px;">MINE FORGER v2</div>
+        
+        <div class="editor-section-title">MODI</div>
         <button id="btn-mode-poly" class="editor-btn active">Poly-Zeichnen</button>
         
         <select id="entity-select" class="editor-btn" style="background: rgba(124, 252, 0, 0.08); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); outline: none;">
@@ -493,6 +600,7 @@
         
         <button id="btn-mode-delete" class="editor-btn" style="border-color: #ff33ff; color: #ff33ff;">Löschen (Del)</button>
         
+        <div class="editor-section-title">SHAPE-VORLAGEN</div>
         <select id="shape-templates-select" class="editor-btn" style="background:#020204; border:1px solid #ffcc00; color:#ffcc00; font-family:var(--font-ui); outline:none;">
           <option value="" style="background:#000;">Vorlage einfügen...</option>
           <option value="pillar" style="background:#000;">Pfeiler</option>
@@ -501,41 +609,154 @@
           <option value="bridge" style="background:#000;">Plattform/Brücke</option>
         </select>
         
-        <button id="btn-zoom-in" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa;">Zoom +</button>
-        <button id="btn-zoom-out" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa;">Zoom -</button>
+        <div class="editor-section-title">ANSICHT</div>
+        <div style="display: flex; gap: 6px;">
+          <button id="btn-zoom-in" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa; flex: 1;">Z +</button>
+          <button id="btn-zoom-out" class="editor-btn" style="border-color: #00ffaa; color: #00ffaa; flex: 1;">Z -</button>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; font-size: 11px; margin-top: 2px;">
+          <span>Visual Grid:</span>
+          <input type="checkbox" id="chk-grid-dots" checked style="accent-color: var(--primary); cursor: pointer;">
+        </div>
 
-        <button id="btn-editor-undo" class="editor-btn" style="border-color: #00ffff; color: #00ffff;">Undo (Z)</button>
+        <div class="editor-section-title">HISTORIE</div>
+        <div style="display: flex; gap: 6px;">
+          <button id="btn-editor-undo" class="editor-btn" style="border-color: #00ffff; color: #00ffff; flex: 1;">Undo</button>
+          <button id="btn-editor-redo" class="editor-btn" style="border-color: #00ffff; color: #00ffff; flex: 1;">Redo</button>
+        </div>
+
+        <div class="editor-section-title">SYSTEM</div>
         <button id="btn-open-settings" class="editor-btn">Einstellungen</button>
         <button id="btn-test-level" class="editor-btn" style="border-color: #ff9900; color: #ff9900;">Testen (T)</button>
-        <button id="btn-export" class="editor-btn">Export</button>
-        <button id="btn-import" class="editor-btn">Import</button>
+        <div style="display: flex; gap: 6px;">
+          <button id="btn-export" class="editor-btn" style="flex: 1;">Export</button>
+          <button id="btn-import" class="editor-btn" style="flex: 1;">Import</button>
+        </div>
         <button id="btn-clear-level" class="editor-btn" style="border-color: #ff3333; color: #ff3333;">Leeren</button>
+        <button id="btn-close-editor" class="editor-btn" style="border-color: #888; color: #888; margin-top: 4px;">Schließen</button>
+      </div>
+
+      <!-- HUD Settings Toggle Button -->
+      <button id="btn-toggle-hud" style="position: absolute; bottom: 8px; left: 8px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; z-index: 24; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">⚙</button>
+      
+      <!-- HUD Help Button -->
+      <button id="btn-help" style="display: none; position: absolute; bottom: 8px; left: 38px; background: rgba(10,10,20,0.7); border: 1px solid rgba(124, 252, 0, 0.4); color: var(--primary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; z-index: 24; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; font-family: var(--font-ui); box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: all 0.2s;">H</button>
+
+      <!-- Help Modal Panel Overlay -->
+      <div id="help-panel" class="dialog-panel" style="max-height: 80%; width: 90%; max-width: 440px; overflow-y: auto; text-align: left; padding: 20px; font-family: var(--font-ui); line-height: 1.5; font-size: 13px; color: #fff;">
+        <div class="dialog-title" style="text-align: center; margin-bottom: 15px;">THRUST - ANLEITUNG</div>
+        
+        <div style="font-weight: bold; color: var(--primary); margin-bottom: 8px; border-bottom: 1px dashed rgba(124,252,0,0.3); padding-bottom: 4px;">DAS ZIEL DES SPIELS</div>
+        <p style="margin-bottom: 14px; font-size: 12px; color: #ddd;">
+          Fliege dein Raumschiff in das unterirdische Labyrinth eines fremden Planeten. Finde das schwere <strong>Fuel-Pod (Pendel)</strong>, docke es mit deinem Traktorstrahl an und fliege es sicher aus der Schwerkraft des Planeten ins Weltall. 
+          <br><br>
+          <span style="color: #ff5555; font-weight: bold;">Achtung!</span> Wenn du den Reaktor beschießt oder zerstörst, startet die Kernschmelze. Entkomme vor dem Ablauf des Timers, bevor der gesamte Planet explodiert!
+        </p>
+
+        <div style="font-weight: bold; color: var(--primary); margin-bottom: 8px; border-bottom: 1px dashed rgba(124,252,0,0.3); padding-bottom: 4px;">STEUERUNG (KEYBOARD / TOUCH)</div>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-bottom: 14px; font-size: 12px;">
+          <strong style="color: var(--primary);">W / ArrowUp:</strong> <span>Schubdüse (Ship Thrust)</span>
+          <strong style="color: var(--primary);">A/D / Left/Right:</strong> <span>Drehen (Rotate)</span>
+          <strong style="color: var(--primary);">SPACE:</strong> <span>Laser abfeuern (Laser Weapon)</span>
+          <strong style="color: var(--primary);">S / Shift:</strong> <span>Schild aktivieren (Shield)</span>
+          <strong style="color: var(--primary);">E:</strong> <span>Editor öffnen/schließen</span>
+          <strong style="color: var(--primary);">P:</strong> <span>Spiel pausieren</span>
+          <strong style="color: var(--primary);">H:</strong> <span>Hilfe-Overlay anzeigen</span>
+        </div>
+
+        <div style="font-weight: bold; color: var(--primary); margin-bottom: 8px; border-bottom: 1px dashed rgba(124,252,0,0.3); padding-bottom: 4px;">SPIEL-ELEMENTE (GFX ICONS)</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+          
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">🚀</div>
+            <div>
+              <strong style="color: #00ffff;">Dein Raumschiff:</strong>
+              <div style="font-size: 11px; color: #bbb;">Trägt dich durch Höhlen. Benötigt Treibstoff. Reagiert auf die planetare Schwerkraft und die Massenträgheit.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">⚡</div>
+            <div>
+              <strong style="color: #7CFC00;">Tractor-Beam & Shield:</strong>
+              <div style="font-size: 11px; color: #bbb;">Dein Kraftfeld schützt vor Schüssen. Wenn du nah am Pod schwebst, fängt der Traktorstrahl das Pendel ein.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">🔵</div>
+            <div>
+              <strong style="color: #ffaa00;">Fuel-Pod (Pendel):</strong>
+              <div style="font-size: 11px; color: #bbb;">Das schwere Objekt, das du bergen musst. Es hängt an einem elastischen Seil und zieht dein Schiff nach unten.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">🔥</div>
+            <div>
+              <strong style="color: #ff2222;">Reactor Core (Reaktor):</strong>
+              <div style="font-size: 11px; color: #bbb;">Die Energiequelle. Mehrfache Treffer bringen den Reaktor zum Überhitzen, wodurch auch alle Abwehrtürme deaktiviert werden.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">👾</div>
+            <div>
+              <strong style="color: #ff55ff;">Turrets (Geschütze):</strong>
+              <div style="font-size: 11px; color: #bbb;">Feuern automatisch auf dein Schiff. Können durch Laserschüsse zerstört werden.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">⛽</div>
+            <div>
+              <strong style="color: #ffff00;">Fuel Pods (Treibstoff):</strong>
+              <div style="font-size: 11px; color: #bbb;">Erhöhen die Treibstoffreserven deines Schiffes, wenn du mit dem Traktorstrahl darüber fliegst.</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <div style="font-size: 18px; line-height: 1; min-width: 24px; text-align: center;">🚪</div>
+            <div>
+              <strong style="color: #2288ff;">Kraftfelder & Türen:</strong>
+              <div style="font-size: 11px; color: #bbb;">Blockieren den Weg. Suche den passenden Schalter (Kreis-Symbol), um sie vorübergehend zu öffnen.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; font-size: 11px; color: #777; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 12px;">
+          coding by felix schmidt 2026
+        </div>
+
+        <button id="btn-close-help" class="editor-btn" style="margin-top: 16px; width: 100%;">Schließen</button>
+      </div>
+
+      <!-- Settings HUD Panel Overlay -->
+      <div id="external-controls">
+        <div class="ctrl-item">
+          <input type="checkbox" id="chk-crt" checked>
+          <label for="chk-crt">CRT Interlacing</label>
+        </div>
+        <div class="ctrl-item">
+          <input type="checkbox" id="chk-bloom" checked>
+          <label for="chk-bloom">Vektorschirm-Glow (Bloom)</label>
+        </div>
+        <div class="ctrl-item" style="display: flex; align-items: center;">
+          <input type="checkbox" id="chk-music" checked>
+          <label for="chk-music">Musik</label>
+          <input type="range" id="vol-music" min="0" max="100" value="100" style="width:60px; vertical-align:middle; margin-left:6px;">
+          <button id="btn-next-music" style="background: rgba(124, 252, 0, 0.1); border: 1px solid var(--primary); color: var(--primary); font-family: var(--font-ui); font-size: 10px; padding: 2px 6px; margin-left: 6px; cursor: pointer; border-radius: 4px;">Next ▶</button>
+        </div>
+        <div class="ctrl-item">
+          <input type="checkbox" id="chk-sfx" checked>
+          <label for="chk-sfx">Sounds (SFX)</label>
+        </div>
+        <div style="color: #444;">|</div>
+        <div style="font-size: 10px; color: #aaa;">P: Pause / E: Editor / WASD</div>
       </div>
 
     </div>
-  </div>
-
-  <!-- Settings HUD Panel -->
-  <div id="external-controls">
-    <div class="ctrl-item">
-      <input type="checkbox" id="chk-crt" checked>
-      <label for="chk-crt">CRT Interlacing</label>
-    </div>
-    <div class="ctrl-item">
-      <input type="checkbox" id="chk-bloom" checked>
-      <label for="chk-bloom">Vektorschirm-Glow (Bloom)</label>
-    </div>
-    <div class="ctrl-item">
-      <input type="checkbox" id="chk-music" checked>
-      <label for="chk-music">Musik</label>
-      <input type="range" id="vol-music" min="0" max="100" value="100" style="width:60px; vertical-align:middle; margin-left:6px;">
-    </div>
-    <div class="ctrl-item">
-      <input type="checkbox" id="chk-sfx" checked>
-      <label for="chk-sfx">Sounds (SFX)</label>
-    </div>
-    <div style="color: #444;">|</div>
-    <div>P: Pause / E: Editor / Steuerung: Pfeiltasten oder WASD</div>
   </div>
 
   <!-- Main Game Code Modules -->

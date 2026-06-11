@@ -1,7 +1,7 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js';
 import { initAudio, resumeAudioContext, playSFX } from './audio.js';
 import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js';
-import { toggleEditor, triggerEditorUndo, saveEditorUndoState, populateEntityProperties, handleEditorClick } from './editor.js';
+import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick } from './editor.js';
 
 export function fireLaserBullet() {
   const now = Date.now();
@@ -31,6 +31,21 @@ export function bindInputEvents(canvas) {
     resumeAudioContext();
     initAudio();
     window.audioContextActiveState = true;
+
+    // Toggle Help Overlay via H key
+    if ((e.key.toLowerCase() === "h" || e.key === "?") && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+      const help = document.getElementById("help-panel");
+      if (help) {
+        e.preventDefault();
+        const shown = help.style.display === "block";
+        help.style.display = shown ? "none" : "block";
+        if (!shown && state.gameState === STATE_PLAYING) {
+          state.paused = true;
+        }
+        playSFX("select");
+      }
+      return;
+    }
 
     if (state.gameState === STATE_TITLE) {
       if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") {
@@ -142,10 +157,49 @@ export function bindInputEvents(canvas) {
         loadLevel(state.editorLevelCopy);
         showNotification("PLAYTEST MODUS");
       }
-      if (e.key.toLowerCase() === "z") {
+      if (e.key.toLowerCase() === "z" && e.ctrlKey) {
         triggerEditorUndo();
       }
-      if (e.key.toLowerCase() === "e" || e.key === "Escape") {
+      if (e.key.toLowerCase() === "y" && e.ctrlKey) {
+        triggerEditorRedo();
+      }
+      if (e.key.toLowerCase() === "g") {
+        state.editorShowGridDots = !state.editorShowGridDots;
+        const chk = document.getElementById("chk-grid-dots");
+        if (chk) chk.checked = state.editorShowGridDots;
+        showNotification(state.editorShowGridDots ? "VISUAL GRID AN" : "VISUAL GRID AUS");
+      }
+      if (e.key.toLowerCase() === "s") {
+        state.snapToGrid = !state.snapToGrid;
+        showNotification(state.snapToGrid ? "GRID SNAP AN" : "GRID SNAP AUS");
+      }
+      if (e.key === "Escape") {
+        state.editorSelectedEntity = null;
+        state.editorSelectedPoly = null;
+        document.getElementById("entity-properties-panel").style.display = "none";
+        showNotification("AUSWAHL AUFGEHOBEN");
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (state.editorSelectedEntity) {
+          saveEditorUndoState();
+          const idx = state.activeLevel.entities.indexOf(state.editorSelectedEntity);
+          if (idx !== -1) {
+            state.activeLevel.entities.splice(idx, 1);
+            showNotification("OBJEKT ENTFERNT");
+          }
+          state.editorSelectedEntity = null;
+          document.getElementById("entity-properties-panel").style.display = "none";
+          loadLevel(state.activeLevel);
+        } else if (state.editorSelectedPoly !== null) {
+          saveEditorUndoState();
+          state.activeLevel.polygons.splice(state.editorSelectedPoly, 1);
+          showNotification("POLYGON ENTFERNT");
+          state.editorSelectedPoly = null;
+          buildCollisionGrid();
+          bakeTerrain();
+        }
+      }
+      if (e.key.toLowerCase() === "e" && !e.ctrlKey) {
         toggleEditor(false);
       }
     }
@@ -223,7 +277,17 @@ export function bindInputEvents(canvas) {
       }
 
       const coords = getEditorWorldCoords(e);
+      state.editorLastMousePos = coords;
       
+      // 1. Check if dragging the exit line
+      const exitLineDist = Math.abs(coords.y - state.activeLevel.exitY);
+      if (exitLineDist < 8) {
+        state.editorDraggingExitLine = true;
+        saveEditorUndoState();
+        showNotification("FLUCHT-LINIE AUSGEWAEHLT");
+        return;
+      }
+
       if (state.editorMode === "delete") {
         saveEditorUndoState();
         let deleted = false;
@@ -265,30 +329,62 @@ export function bindInputEvents(canvas) {
         return;
       }
 
+      // 2. Check if clicked near an edge to insert a vertex
+      if (checkEdgeClick(coords)) {
+        return;
+      }
+
       let found = false;
-      for (let i = 0; i < state.activeLevel.entities.length; i++) {
-        const ent = state.activeLevel.entities[i];
-        const dist = Math.sqrt((coords.x - ent.x)**2 + (coords.y - ent.y)**2);
-        if (dist < 12) {
-          state.editorDraggingEntity = ent;
-          state.editorSelectedEntity = ent;
-          populateEntityProperties(ent);
-          found = true;
-          break;
+      // 3. Check if clicked on a vertex
+      for (let p = 0; p < state.activeLevel.polygons.length; p++) {
+        const poly = state.activeLevel.polygons[p];
+        for (let v = 0; v < poly.length; v++) {
+          const pt = poly[v];
+          const dist = Math.sqrt((coords.x - pt[0])**2 + (coords.y - pt[1])**2);
+          if (dist < 8) {
+            state.editorDraggingVertex = { polyIdx: p, vertIdx: v };
+            state.editorSelectedPoly = p;
+            state.editorSelectedEntity = null;
+            document.getElementById("entity-properties-panel").style.display = "none";
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+
+      // 4. Check if clicked on an entity
+      if (!found) {
+        for (let i = 0; i < state.activeLevel.entities.length; i++) {
+          const ent = state.activeLevel.entities[i];
+          const dist = Math.sqrt((coords.x - ent.x)**2 + (coords.y - ent.y)**2);
+          if (dist < 12) {
+            state.editorDraggingEntity = ent;
+            state.editorSelectedEntity = ent;
+            populateEntityProperties(ent);
+            state.editorSelectedPoly = null;
+            found = true;
+            break;
+          }
         }
       }
 
+      // 5. Check if clicked inside a polygon to select/drag it
       if (!found) {
         for (let p = 0; p < state.activeLevel.polygons.length; p++) {
-          const poly = state.activeLevel.polygons[p];
-          for (let v = 0; v < poly.length; v++) {
-            const pt = poly[v];
-            const dist = Math.sqrt((coords.x - pt[0])**2 + (coords.y - pt[1])**2);
-            if (dist < 8) {
-              state.editorDraggingVertex = { polyIdx: p, vertIdx: v };
-              found = true;
-              break;
-            }
+          if (isPointInPolygon(coords.x, coords.y, state.activeLevel.polygons[p])) {
+            state.editorSelectedPoly = p;
+            state.editorSelectedEntity = null;
+            document.getElementById("entity-properties-panel").style.display = "none";
+            state.editorDraggingPoly = {
+              polyIdx: p,
+              startCoords: { x: coords.x, y: coords.y },
+              originalVerts: state.activeLevel.polygons[p].map(pt => [pt[0], pt[1]])
+            };
+            found = true;
+            showNotification("POLYGON AUSGEWAEHLT");
+            saveEditorUndoState();
+            break;
           }
         }
       }
@@ -318,8 +414,22 @@ export function bindInputEvents(canvas) {
       }
 
       const coords = getEditorWorldCoords(e);
+      state.editorLastMousePos = coords;
+
+      // Update HUD coordinates overlay
+      const coordsSpan = document.getElementById("status-coords");
+      if (coordsSpan) {
+        coordsSpan.innerText = `X: ${Math.round(coords.x)} Y: ${Math.round(coords.y)}`;
+      }
       
-      if (state.editorDraggingVertex) {
+      if (state.editorDraggingExitLine) {
+        state.activeLevel.exitY = state.snapToGrid ? Math.round(coords.y / state.editorGridSize) * state.editorGridSize : coords.y;
+        const exitRange = document.getElementById("exit-y-range");
+        if (exitRange) exitRange.value = state.activeLevel.exitY;
+        const exitVal = document.getElementById("exit-y-val");
+        if (exitVal) exitVal.innerText = state.activeLevel.exitY;
+      }
+      else if (state.editorDraggingVertex) {
         const v = state.editorDraggingVertex;
         state.activeLevel.polygons[v.polyIdx][v.vertIdx] = [coords.x, coords.y];
         buildCollisionGrid();
@@ -329,6 +439,63 @@ export function bindInputEvents(canvas) {
         state.editorDraggingEntity.x = coords.x;
         state.editorDraggingEntity.y = coords.y;
         loadLevel(state.activeLevel);
+      }
+      else if (state.editorDraggingPoly) {
+        const drag = state.editorDraggingPoly;
+        const dx = coords.x - drag.startCoords.x;
+        const dy = coords.y - drag.startCoords.y;
+        const poly = state.activeLevel.polygons[drag.polyIdx];
+        for (let v = 0; v < poly.length; v++) {
+          let nx = drag.originalVerts[v][0] + dx;
+          let ny = drag.originalVerts[v][1] + dy;
+          if (state.snapToGrid) {
+            nx = Math.round(nx / state.editorGridSize) * state.editorGridSize;
+            ny = Math.round(ny / state.editorGridSize) * state.editorGridSize;
+          }
+          poly[v] = [nx, ny];
+        }
+        buildCollisionGrid();
+        bakeTerrain();
+      }
+
+      // Live hover checking
+      state.editorHoveredVertex = null;
+      state.editorHoveredEntity = null;
+      state.editorHoveredPoly = null;
+
+      let hoverFound = false;
+      for (let p = 0; p < state.activeLevel.polygons.length; p++) {
+        const poly = state.activeLevel.polygons[p];
+        for (let v = 0; v < poly.length; v++) {
+          const pt = poly[v];
+          const dist = Math.sqrt((coords.x - pt[0])**2 + (coords.y - pt[1])**2);
+          if (dist < 8) {
+            state.editorHoveredVertex = { polyIdx: p, vertIdx: v };
+            hoverFound = true;
+            break;
+          }
+        }
+        if (hoverFound) break;
+      }
+
+      if (!hoverFound) {
+        for (const ent of state.activeLevel.entities) {
+          const dist = Math.sqrt((coords.x - ent.x)**2 + (coords.y - ent.y)**2);
+          if (dist < 12) {
+            state.editorHoveredEntity = ent;
+            hoverFound = true;
+            break;
+          }
+        }
+      }
+
+      if (!hoverFound) {
+        for (let p = 0; p < state.activeLevel.polygons.length; p++) {
+          if (isPointInPolygon(coords.x, coords.y, state.activeLevel.polygons[p])) {
+            state.editorHoveredPoly = p;
+            break;
+          }
+        }
       }
     }
   });
@@ -344,6 +511,8 @@ export function bindInputEvents(canvas) {
     }
     state.editorDraggingVertex = null;
     state.editorDraggingEntity = null;
+    state.editorDraggingPoly = null;
+    state.editorDraggingExitLine = false;
   });
 
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());

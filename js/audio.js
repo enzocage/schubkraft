@@ -1,4 +1,4 @@
-import { state, STATE_PLAYING, STATE_TITLE, STATE_HIGHSCORE } from './constants.js';
+import { state, STATE_PLAYING, STATE_TITLE, STATE_HIGHSCORE, MP3_PLAYLIST } from './constants.js';
 import { SidForge } from './sidforge.js';
 
 // ============================================================================
@@ -17,6 +17,7 @@ let currentDroneVariant = 0;
 let SFX_BANK = {};
 let TRACKER_SONG = null;
 let mp3Elem = null;
+let playlistIndex = 4; // Start with enzo_cage_hypnos.mp3 (index 4)
 
 // ============================================================================
 // Base SFX Templates — Optimized C64 SID Sound Design
@@ -572,13 +573,14 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Title music: try playing enzo cage hypnos MP3, fall back to metal theme
+  // 3. Title music: try playing the first MP3 in playlist, fall back to metal theme
   try {
-    mp3Elem = new Audio("https://enzocage.de/mp3/enzo_cage_atom/enzo_cage_hypnos.mp3");
-    mp3Elem.loop = true;
+    const track = MP3_PLAYLIST[playlistIndex];
+    mp3Elem = new Audio("https://enzocage.de/mp3/enzo_cage_atom/" + track);
     mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
+    mp3Elem.addEventListener("ended", playNextTrack);
     await mp3Elem.play();
-    console.log("MP3 playing: Enzo Cage Hypnos");
+    console.log("MP3 playing: " + track);
   } catch (e) {
     mp3Elem = null;
     console.warn("MP3 play failed, using fallback:", e.message);
@@ -588,13 +590,40 @@ async function doInitAudio() {
     forge.loadSong(TRACKER_SONG);
   }
   sid = forge; // publish only when fully ready
-  const musicLabel = mp3Elem ? "Enzo Cage Hypnos (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
+  const musicLabel = mp3Elem ? MP3_PLAYLIST[playlistIndex] : (TRACKER_SONG ? TRACKER_SONG.title : "none");
   console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
+}
+
+export async function playNextTrack() {
+  if (mp3Elem) {
+    mp3Elem.pause();
+    mp3Elem.removeEventListener("ended", playNextTrack);
+  }
+  playlistIndex = (playlistIndex + 1) % MP3_PLAYLIST.length;
+  const track = MP3_PLAYLIST[playlistIndex];
+  try {
+    mp3Elem = new Audio("https://enzocage.de/mp3/enzo_cage_atom/" + track);
+    mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
+    mp3Elem.addEventListener("ended", playNextTrack);
+    if (state.musicEnabled) {
+      await mp3Elem.play();
+    }
+    console.log("Playing next track: " + track);
+  } catch (err) {
+    console.error("Failed to play next track: " + track, err);
+  }
 }
 
 export function updateMusicVolume() {
   if (mp3Elem) {
     mp3Elem.volume = state.musicEnabled ? state.musicVolume : 0.0;
+    if (state.musicEnabled) {
+      if (mp3Elem.paused) {
+        mp3Elem.play().catch(err => console.log(err));
+      }
+    } else {
+      mp3Elem.pause();
+    }
   }
 }
 

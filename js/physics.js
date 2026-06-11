@@ -541,36 +541,77 @@ export function checkRaycastTerrain(p1, p2) {
 export function spawnSparks(cx, cy, color, count) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 1.8 + 0.4;
-    const life = Math.random() * 0.28 + 0.1;
+    const speed = Math.random() * 2.4 + 0.4;
+    const life = Math.random() * 0.35 + 0.12;
+    let finalColor = color;
+    if (color === "#ffffff" && Math.random() < 0.5) {
+      finalColor = Math.random() < 0.5 ? "#ffaa00" : "#ffcc44";
+    }
     state.particles.push({
       x: cx,
       y: cy,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      color: color,
+      color: finalColor,
       life: life,
       maxLife: life,
-      size: 0.8
+      size: Math.random() * 1.4 + 0.4
     });
   }
 }
 
 export function spawnExplosionParticles(cx, cy, count) {
-  for (let i = 0; i < count; i++) {
+  // Layer 1: Fireball core (large expanding hot fire embers)
+  for (let i = 0; i < count * 0.7; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 2.8 + 0.6;
-    const life = Math.random() * 0.9 + 0.4;
+    const speed = Math.random() * 2.2 + 0.5;
+    const life = Math.random() * 0.7 + 0.3;
     state.particles.push({
-      x: cx,
-      y: cy,
+      x: cx + (Math.random() - 0.5) * 4,
+      y: cy + (Math.random() - 0.5) * 4,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed + 0.1,
-      color: i % 3 === 0 ? "#ffffff" : (i % 3 === 1 ? "#ffaa00" : "#ff5500"),
+      vy: Math.sin(angle) * speed - 0.1,
+      color: i % 3 === 0 ? "#ff3300" : (i % 3 === 1 ? "#ffaa00" : "#ffdd44"),
       life: life,
       maxLife: life,
       grav: true,
-      size: Math.random() * 1.5 + 0.5
+      size: Math.random() * 3.5 + 1.8
+    });
+  }
+
+  // Layer 2: White hot plasma sparks (fast moving)
+  for (let i = 0; i < count * 0.9; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4.2 + 1.5;
+    const life = Math.random() * 0.8 + 0.3;
+    state.particles.push({
+      x: cx,
+      y: cy,
+      vx: Math.Cos ? Math.Cos(angle) * speed : Math.cos(angle) * speed, // safe fallback
+      vy: Math.sin(angle) * speed - 0.2,
+      color: i % 2 === 0 ? "#ffffff" : "#ffffcc",
+      life: life,
+      maxLife: life,
+      grav: true,
+      size: Math.random() * 1.5 + 0.6
+    });
+  }
+
+  // Layer 3: Drifting soot & smoke clouds (slow, fading)
+  for (let i = 0; i < count * 0.5; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 0.6 + 0.1;
+    const life = Math.random() * 1.3 + 0.7;
+    state.particles.push({
+      x: cx + (Math.random() - 0.5) * 10,
+      y: cy + (Math.random() - 0.5) * 10,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 0.3,
+      color: i % 2 === 0 ? "rgba(90, 90, 100, 0.45)" : "rgba(130, 110, 140, 0.35)",
+      life: life,
+      maxLife: life,
+      grav: false,
+      size: Math.random() * 4.5 + 2.5
     });
   }
 }
@@ -595,14 +636,15 @@ export function spawnDebris(cx, cy, color, count, baseVx, baseVy) {
   }
 }
 
-export function spawnShockwave(cx, cy, color) {
+export function spawnShockwave(cx, cy, color, maxRadius = 36, speedScale = 1.0) {
   state.shockwaves.push({
     x: cx,
     y: cy,
     radius: 2,
-    maxRadius: 36,
-    life: 0.4,
-    maxLife: 0.4,
+    maxRadius: maxRadius,
+    life: 0.4 / speedScale,
+    maxLife: 0.4 / speedScale,
+    speedScale: speedScale,
     color: color || "#ffaa00"
   });
 }
@@ -613,12 +655,37 @@ export function explodeShip() {
   state.ship.respawnTimer = 2.0;
   
   playSFX("shipDeath");
-  state.screenShake = 24;
-  state.flashTimer = 0.5;
+  state.screenShake = 32;
+  state.flashTimer = 0.55;
   
-  spawnExplosionParticles(state.ship.x, state.ship.y, 30);
-  spawnDebris(state.ship.x, state.ship.y, "#7CFC00", 8, state.ship.vx, state.ship.vy);
-  spawnShockwave(state.ship.x, state.ship.y, "#ffaa00");
+  // Spectacular Ship Destruction: 75 particles across multiple layers
+  spawnExplosionParticles(state.ship.x, state.ship.y, 75);
+  
+  // Neon green battery sparks burst (matching ship color)
+  for (let i = 0; i < 30; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4.5 + 0.8;
+    const life = Math.random() * 0.9 + 0.3;
+    state.particles.push({
+      x: state.ship.x,
+      y: state.ship.y,
+      vx: Math.cos(angle) * speed + state.ship.vx * 0.4,
+      vy: Math.sin(angle) * speed + state.ship.vy * 0.4,
+      color: i % 2 === 0 ? "#7CFC00" : "#aaff33",
+      life: life,
+      maxLife: life,
+      grav: true,
+      size: Math.random() * 2.2 + 0.6
+    });
+  }
+
+  // Debris shards
+  spawnDebris(state.ship.x, state.ship.y, "#7CFC00", 12, state.ship.vx, state.ship.vy);
+  
+  // Concentric dual shockwaves
+  spawnShockwave(state.ship.x, state.ship.y, "#ffaa00", 38, 1.1);
+  spawnShockwave(state.ship.x, state.ship.y, "#7CFC00", 52, 0.7);
+  
   state.lives--;
   
   if (state.pod.attached) {
@@ -633,12 +700,17 @@ export function explodePod() {
   state.ship.respawnTimer = 2.0;
 
   playSFX("explosion");
-  state.screenShake = 20;
-  state.flashTimer = 0.4;
+  state.screenShake = 28;
+  state.flashTimer = 0.45;
 
-  spawnExplosionParticles(state.pod.x, state.pod.y, 25);
-  spawnDebris(state.pod.x, state.pod.y, "#ffffff", 6, state.pod.vx, state.pod.vy);
-  spawnShockwave(state.pod.x, state.pod.y, "#ffffff");
+  // Spectacular Pod destruction: 65 particles
+  spawnExplosionParticles(state.pod.x, state.pod.y, 65);
+  
+  // Concentric dual white/blue shockwaves
+  spawnShockwave(state.pod.x, state.pod.y, "#ffffff", 32, 1.2);
+  spawnShockwave(state.pod.x, state.pod.y, "#00ffff", 46, 0.8);
+  
+  spawnDebris(state.pod.x, state.pod.y, "#ffffff", 8, state.pod.vx, state.pod.vy);
   state.lives--;
 }
 

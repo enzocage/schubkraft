@@ -700,15 +700,19 @@ export function renderGame(canvas, ctx) {
 
   ctx.shadowBlur = 0; // Disable shadow glow
 
-  // 9. Explosion & Rocket sparks — alpha fades out over lifetime
+  // 9. Explosion & Rocket sparks — circular neon particles with alpha fade out
   for (const p of state.particles) {
+    ctx.save();
     ctx.globalAlpha = p.maxLife ? Math.max(0, p.life / p.maxLife) : 1;
-    ctx.strokeStyle = p.color;
-    ctx.lineWidth = p.size * dpr / Math.min(scaleX, scaleY);
+    ctx.fillStyle = p.color;
+    if (state.useBloom) {
+      ctx.shadowBlur = 4 * dpr;
+      ctx.shadowColor = p.color;
+    }
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x - p.vx * 0.55, p.y - p.vy * 0.55);
-    ctx.stroke();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 
@@ -1031,8 +1035,8 @@ export function renderTitleScreen(ctx) {
     drawVectorText(ctx, msg, 70, 154, 0.38, "#ff9900");
   }
 
-  drawVectorText(ctx, "W A S D + SHIFT + SPACE", 70, 178, 0.28, "#555");
-  drawVectorText(ctx, "code and music by felix schmidt", 62, 188, 0.25, "#333");
+  drawVectorText(ctx, "W A S D + SHIFT + SPACE / H: HELP", 64, 178, 0.28, "#555");
+  drawVectorText(ctx, "coding by felix schmidt 2026", 72, 188, 0.25, "#333");
 }
 
 export function renderGameOverScreen(ctx) {
@@ -1081,29 +1085,53 @@ export function renderLevelCompleteScreen(ctx) {
 }
 
 export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
-  ctx.strokeStyle = "rgba(124, 252, 0, 0.08)";
-  ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+  // 1. Grid Dots visual rendering
+  if (state.editorShowGridDots) {
+    ctx.save();
+    ctx.fillStyle = "rgba(124, 252, 0, 0.16)";
+    const spacing = state.snapToGrid ? state.editorGridSize : 16;
+    const sX = Math.floor((state.editorCam.x - 160 / state.editorScale) / spacing) * spacing;
+    const eX = sX + 320 / state.editorScale + spacing * 2;
+    const sY = Math.floor((state.editorCam.y - 100 / state.editorScale) / spacing) * spacing;
+    const eY = sY + 200 / state.editorScale + spacing * 2;
+    
+    for (let x = sX; x < eX; x += spacing) {
+      for (let y = sY; y < eY; y += spacing) {
+        ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+      }
+    }
+    ctx.restore();
+  } else {
+    // Faint boundary guidelines if grid dots are hidden
+    ctx.strokeStyle = "rgba(124, 252, 0, 0.04)";
+    ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
+    ctx.beginPath();
+    ctx.moveTo(state.editorCam.x - 160, state.editorCam.y);
+    ctx.lineTo(state.editorCam.x + 160, state.editorCam.y);
+    ctx.moveTo(state.editorCam.x, state.editorCam.y - 100);
+    ctx.lineTo(state.editorCam.x, state.editorCam.y + 100);
+    ctx.stroke();
+  }
+
+  // 2. Interactive Exit line handle
+  const exitY = state.activeLevel.exitY || 50;
+  ctx.save();
+  ctx.strokeStyle = "#ffff00";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(state.editorCam.x - 160 / state.editorScale, exitY);
+  ctx.lineTo(state.editorCam.x + 160 / state.editorScale, exitY);
+  ctx.stroke();
   
-  const gridSpacing = 16;
-  const startX = Math.floor((state.editorCam.x - 160) / gridSpacing) * gridSpacing;
-  const endX = startX + 320 + gridSpacing;
-  const startY = Math.floor((state.editorCam.y - 100) / gridSpacing) * gridSpacing;
-  const endY = startY + 200 + gridSpacing;
+  // Handle box
+  ctx.fillStyle = "#ffff00";
+  ctx.fillRect(state.editorCam.x - 30, exitY - 4, 60, 8);
+  ctx.lineWidth = 0.5;
+  drawVectorText(ctx, "EXIT HEIGHT", state.editorCam.x - 26, exitY - 3, 0.16, "#000000");
+  ctx.restore();
 
-  for (let x = startX; x < endX; x += gridSpacing) {
-    ctx.beginPath();
-    ctx.moveTo(x, startY);
-    ctx.lineTo(x, endY);
-    ctx.stroke();
-  }
-  for (let y = startY; y < endY; y += gridSpacing) {
-    ctx.beginPath();
-    ctx.moveTo(startX, y);
-    ctx.lineTo(endX, y);
-    ctx.stroke();
-  }
-
-  // Spawn indicator
+  // 3. Spawn point indicator
   ctx.strokeStyle = "#ff9900";
   ctx.beginPath();
   ctx.arc(state.activeLevel.spawn.x, state.activeLevel.spawn.y, 6, 0, Math.PI * 2);
@@ -1113,7 +1141,7 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
   drawVectorText(ctx, "SPAWN", state.activeLevel.spawn.x - 14, state.activeLevel.spawn.y - 12, 0.22, "#ff9900");
   ctx.restore();
 
-  // switch visual link lines
+  // 4. Switch visual link lines
   ctx.save();
   ctx.strokeStyle = "rgba(0, 255, 255, 0.45)";
   ctx.setLineDash([3, 3]);
@@ -1129,22 +1157,81 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
   }
   ctx.restore();
 
-  // Vertices
-  ctx.fillStyle = "#ffffff";
+  // 5. Selected / Hovered Polygon visual fills
+  if (state.editorHoveredPoly !== null) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 255, 255, 0.06)";
+    ctx.beginPath();
+    const poly = state.activeLevel.polygons[state.editorHoveredPoly];
+    if (poly && poly.length > 0) {
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (state.editorSelectedPoly !== null) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 255, 255, 0.03)";
+    ctx.strokeStyle = "rgba(0, 255, 255, 0.7)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    const poly = state.activeLevel.polygons[state.editorSelectedPoly];
+    if (poly && poly.length > 0) {
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 6. Selected / Hovered Entity outlines
+  if (state.editorSelectedEntity) {
+    ctx.save();
+    ctx.strokeStyle = "#00ffff";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.arc(state.editorSelectedEntity.x, state.editorSelectedEntity.y, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (state.editorHoveredEntity && state.editorHoveredEntity !== state.editorSelectedEntity) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(0, 255, 255, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(state.editorHoveredEntity.x, state.editorHoveredEntity.y, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 7. Vertices drawing
+  ctx.save();
   for (let p = 0; p < state.activeLevel.polygons.length; p++) {
     const poly = state.activeLevel.polygons[p];
     for (let v = 0; v < poly.length; v++) {
       const pt = poly[v];
       if (state.editorHoveredVertex && state.editorHoveredVertex.polyIdx === p && state.editorHoveredVertex.vertIdx === v) {
-        ctx.fillStyle = "#ff0000";
-        ctx.fillRect(pt[0] - 3, pt[1] - 3, 6, 6);
+        ctx.fillStyle = "#ff3333";
+        ctx.fillRect(pt[0] - 3.5, pt[1] - 3.5, 7, 7);
+      } else if (state.editorSelectedPoly === p) {
+        ctx.fillStyle = "#00ffff";
+        ctx.fillRect(pt[0] - 2.5, pt[1] - 2.5, 5, 5);
       } else {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(pt[0] - 2, pt[1] - 2, 4, 4);
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillRect(pt[0] - 1.5, pt[1] - 1.5, 3, 3);
       }
     }
   }
+  ctx.restore();
 
+  // 8. Active drawing polygon line segments
   if (state.activePolygon.length > 0) {
     ctx.strokeStyle = "#00ffff";
     ctx.lineWidth = (1.5 * dpr) / Math.min(scaleX, scaleY);
@@ -1157,10 +1244,11 @@ export function renderEditorHelpers(ctx, dpr, scaleX, scaleY) {
     
     ctx.fillStyle = "#00ffff";
     for (const pt of state.activePolygon) {
-      ctx.fillRect(pt[0] - 2, pt[1] - 2, 4, 4);
+      ctx.fillRect(pt[0] - 2.5, pt[1] - 2.5, 5, 5);
     }
   }
 
+  // 9. Floating cursor coordinates display under active toolbar status bar
   ctx.save();
   ctx.lineWidth = dpr / Math.min(scaleX, scaleY);
   let modeText = `MODUS: ${state.editorMode.toUpperCase()}`;

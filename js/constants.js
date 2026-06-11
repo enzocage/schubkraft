@@ -393,11 +393,32 @@ export const state = {
   activePolygon: [],
   selectedEntityPreset: "fuel",
 
-  editorHoveredVertex: null,
-  editorHoveredEntity: null,
-  editorDraggingVertex: null,
-  editorDraggingEntity: null,
-
   editorHistory: [],
-  editorLevelCopy: null
+  editorRedoHistory: [],
+  editorLevelCopy: null,
+  editorShowGridDots: true,
+  editorSelectedPoly: null,
+  editorHoveredPoly: null,
+  editorDraggingPoly: null,
+  editorLastMousePos: { x: 0, y: 0 }
 };
+
+export const MP3_PLAYLIST = [
+  "enzo_cage_stone_statue.mp3",
+  "enzo_cage_inner_switch.mp3",
+  "enzo_cage_convergence.mp3",
+  "enzo_cage_silence.mp3",
+  "enzo_cage_hypnos.mp3",
+  "enzo_cage_1984_koyaanisquatsi.mp3",
+  "enzo_cage_ion.mp3",
+  "enzo_cage_ohm.mp3",
+  "enzo_cage_tsing_yi.mp3",
+  "enzo_cage_spellbound.mp3",
+  "enzo_cage_private_traps.mp3",
+  "enzo_cage_equilibrium.mp3",
+  "enzo_cage_neon.mp3",
+  "enzo_cage_mea.mp3",
+  "enzo_cage_in_der_nacht.mp3",
+  "enzo_cage_true_peace.mp3",
+  "enzo_cage_quecksilber.mp3"
+];
