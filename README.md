@@ -39,6 +39,9 @@ Hier sind einige Impressionen aus **SCHUBKRAFT** (Titelbildschirm, Gameplay, Kam
 ![Level-Editor](gfx/Screenshot%20(27).png)
 *Der integrierte Level-Editor zum Erstellen eigener Minen*
 
+![KI Level-Generator](gfx/ki%20level.png)
+*Der prozedurale KI-Level-Generator mit Vorschau-Galerie und Schwierigkeitsgrad-Einstellung*
+
 ![Kampagnenauswahl](gfx/Screenshot%20(28).png)
 *Die Kampagnenauswahl für alle 18 Levels*
 
@@ -74,7 +77,7 @@ Hier sind einige Impressionen aus **SCHUBKRAFT** (Titelbildschirm, Gameplay, Kam
   - Schild (kostet Fuel) reflektiert Terrain-Aufprälle und feindliche Projektile.
   - Lokale Highscore-Liste (Top 5, localStorage) mit 3-Buchstaben-Arcade-Namenseingabe.
   - Touch-Steuerung für Mobilgeräte (Wisch-Lenkung links, Schub/Feuer/Schild rechts).
-- **Level-Editor** — siehe [eigener Abschnitt](#der-level-editor).
+- **Level-Editor & KI-Generator** — siehe [eigener Abschnitt](#der-level-editor).
 
 ---
 
@@ -166,18 +169,34 @@ Nach Level 18 beginnt die Kampagne von vorn — **mit invertierter Schwerkraft**
 
 ---
 
-## Der Level-Editor
+## Der Level-Editor & KI-Level-Generator
 
-Der vollwertige In-Game-Editor (Menüpunkt **LEVEL EDITOR** oder Taste **E**) macht aus dem Spiel einen Baukasten:
+Der vollwertige In-Game-Editor (Menüpunkt **LEVEL EDITOR** oder Taste **E**) macht aus dem Spiel einen kreativen Baukasten, ergänzt durch einen leistungsstarken prozeduralen Generator:
 
-- **Terrain zeichnen**: Polygone Punkt für Punkt setzen; Klick auf den Anfangspunkt schließt die Form. Vertices lassen sich nachträglich ziehen oder löschen.
-- **Objekte platzieren**: Treibstoff, Abwehrtürme, Reaktor, Spawn-Punkt, Pendel, Schalter und Kraftfeld-Türen per Auswahlliste.
-- **Eigenschaften-Panel**: Turret-Ausrichtung (Winkel-Slider), Tür-Maße sowie frei benennbare Trigger-/Ziel-IDs für Schalter-Tür-Verknüpfungen. Verknüpfungen werden im Editor als gestrichelte Linien visualisiert (siehe Screenshot oben).
-- **Level-Einstellungen**: Name, Planet-Theme, Schwerkraft (0.005–0.050), Start-Treibstoff (200–5000) und Grid-Snapping (frei, 4/8/16/32 px).
+### Editor-Features
+- **Terrain zeichnen**: Polygone Punkt für Punkt setzen; Klick auf den Anfangspunkt schließt die Form. Vertices lassen sich nachträglich verschieben oder löschen.
+- **Objekte platzieren**: Treibstoff, Abwehrtürme, Reaktor, Spawn-Punkt, Pendel (Pod), Schalter und Kraftfeld-Türen per Auswahlliste.
+- **Eigenschaften-Panel**: Turret-Ausrichtung (Winkel-Slider), Tür-Maße sowie frei benennbare Trigger-/Ziel-IDs für Schalter-Tür-Verknüpfungen. Verknüpfungen werden im Editor als gestrichelte Linien visualisiert.
+- **Level-Einstellungen**: Name, Planet-Theme (C64 / Inverted / BBC), Schwerkraft (0.005–0.050), Start-Treibstoff (200–5000) und Grid-Snapping (frei, 4/8/16/32 px).
 - **Vorlagen**: Fertige Terrain-Bausteine (Pfeiler, Reaktor-Becken, Lande-Pedestal, Brücke) mit einem Klick einfügen.
-- **Undo-System**: Die letzten 5 Bearbeitungsschritte sind rücknehmbar (Z oder Button).
-- **Playtest**: Taste **T** startet das Level sofort mit einem Leben — Editor-Zustand bleibt erhalten.
+- **Undo/Redo-System**: Die letzten 5 Bearbeitungsschritte lassen sich beliebig rückgängig machen (Z / Undo / Redo Buttons).
+- **Playtest**: Taste **T** startet das Level sofort mit einem Leben — der Editor-Zustand bleibt erhalten.
 - **Export/Import**: Levels als JSON kopieren, herunterladen oder per Datei/Einfügen importieren.
+
+### KI-Level-Generator (AI Generator)
+Über den Button **KI: Level generieren** steht ein hochentwickelter prozeduraler Generator zur Verfügung, der auf Knopfdruck vollständige, spielbare und garantiert lösbare Höhlensysteme entwirft:
+
+![KI Level-Generator Vorschau](gfx/ki%20level.png)
+*Der integrierte KI-Level-Generator mit Schwierigkeitswahl und 20 prozeduralen Vorschlägen*
+- **Schwierigkeitsgrade**:
+  - *Leicht*: Kleine Mine, wenige Gegner, großzügiger Treibstoff-Vorrat.
+  - *Mittel*: Ausgewogene Höhlen-Pfade, moderate Abwehrtürme, erste einfache Türschaltungen.
+  - *Schwer*: Riesige und tiefe Höhlen, zahlreiche Geschütze, komplexe Schalter-Tür-Schaltungen und engere Passagen.
+- **Vorschau- & Auswahlsystem**: Die KI generiert eine Galerie von 20 unterschiedlichen Höhlensystemen. Diese lassen sich in einer Miniatur-2D-Karte vorab analysieren. Bei Nichtgefallen kann die Liste neu gewürfelt, durchgeblättert und der favorisierte Entwurf direkt in den Editor übernommen werden.
+- **Solvabilitäts-Garantie (Spielbarkeit)**: 
+  - Die Mindestbreite der Höhlengänge wird mathematisch abgesichert, damit das Schiff samt angekoppeltem Pendel hindurchpasst.
+  - Schalter werden logisch immer so platziert, dass sie auf dem Weg vor der verschlossenen Tür erreichbar sind.
+  - Geschütztürme werden automatisch bündig an den Wänden platziert, und Abzweigungen sowie schwebende Inseln (in breiten Kavernen) lockern das Layout organisch auf.
 
 ---
 
