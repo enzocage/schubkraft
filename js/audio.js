@@ -571,10 +571,10 @@ async function doInitAudio() {
     return;
   }
 
-  // 3. Title music: try loading Driller main theme MP3, fall back to metal theme
+  // 3. Title music: try loading Wizball title theme MP3, fall back to metal theme
   let mp3Source = null;
   try {
-    const mp3Resp = await fetch("https://fi.zophar.net/soundfiles/commodore-64/driller/01_Main%20Theme.mp3");
+    const mp3Resp = await fetch("https://nu.vgmtreasurechest.com/soundtracks/wizball-commodore-64/edccdncx/01_Title%20Screen.mp3");
     if (mp3Resp.ok) {
       const mp3Buf = await mp3Resp.arrayBuffer();
       const audioCtx = forge.ctx;
@@ -587,7 +587,7 @@ async function doInitAudio() {
       mp3Source.loop = true;
       mp3Source.connect(gainNode);
       mp3Source.start();
-      console.log("MP3 loaded: Driller Main Theme");
+      console.log("MP3 loaded: Wizball Title Screen");
     }
   } catch (e) {
     console.warn("MP3 load failed, using fallback:", e.message);
@@ -597,7 +597,7 @@ async function doInitAudio() {
     forge.loadSong(TRACKER_SONG);
   }
   sid = forge; // publish only when fully ready
-  const musicLabel = mp3Source ? "Driller Main Theme (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
+  const musicLabel = mp3Source ? "Wizball Title Screen (MP3)" : (TRACKER_SONG ? TRACKER_SONG.title : "none");
   console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
 }
 
