@@ -25,7 +25,8 @@ import {
   updateSequencer,
   updateMusicVolume,
   playNextTrack,
-  playSFX
+  playSFX,
+  playSpeech
 } from './audio.js?v=2';
 
 import {
@@ -102,8 +103,11 @@ function buildCampaignList() {
       state.lives = 3;
       state.score = 0;
       state.activeCampaignIdx = idx;
-      loadLevel(CAMPAIGN[idx]);
-      state.gameState = STATE_PLAYING;
+      playSpeech("play.wav");
+      setTimeout(() => {
+        loadLevel(CAMPAIGN[idx], true);
+        state.gameState = STATE_PLAYING;
+      }, 800);
       document.getElementById("campaign-select-panel").style.display = "none";
     });
     container.appendChild(btn);
@@ -347,9 +351,11 @@ function coreGameLoop(time) {
           state.hsNewName = "AAA";
           state.hsNameIndex = 0;
           showNotification("BESTENLISTE ERREICHT! NAME EINGEBEN");
+          playSpeech("game over.wav");
         } else {
           state.gameState = STATE_GAME_OVER;
           playSFX("gameOver");
+          playSpeech("game over.wav");
         }
         updateTractorSound(false, false, false);
       }
@@ -414,6 +420,7 @@ if (chkMusic) {
     state.musicEnabled = e.target.checked;
     updateMusicVolume();
     refreshMusicPlayBtn();
+    playSpeech(state.musicEnabled ? "music on.wav" : "music off.wav");
   });
 }
 
@@ -455,6 +462,7 @@ if (musicPlayBtn) {
     if (chkMusic) chkMusic.checked = state.musicEnabled;
     refreshMusicPlayBtn();
     playSFX("select");
+    playSpeech(state.musicEnabled ? "music on.wav" : "music off.wav");
   });
 }
 

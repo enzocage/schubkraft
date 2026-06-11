@@ -1,5 +1,5 @@
 import { state, STATE_TITLE, STATE_PLAYING, STATE_GAME_OVER, STATE_HIGHSCORE, STATE_EDITOR, TITLE_MENU_ITEMS, CAMPAIGN } from './constants.js?v=2';
-import { initAudio, resumeAudioContext, playSFX } from './audio.js?v=2';
+import { initAudio, resumeAudioContext, playSFX, playSpeech } from './audio.js?v=2';
 import { loadLevel, buildCollisionGrid, bakeTerrain, showNotification, getEditorWorldCoords, spawnSparks } from './physics.js?v=2';
 import { toggleEditor, triggerEditorUndo, triggerEditorRedo, saveEditorUndoState, populateEntityProperties, handleEditorClick, isPointInPolygon, checkEdgeClick, startPlaytest } from './editor.js?v=2';
 
@@ -41,6 +41,7 @@ export function bindInputEvents(canvas) {
         help.style.display = shown ? "none" : "block";
         if (!shown && state.gameState === STATE_PLAYING) {
           state.paused = true;
+          playSpeech("pause.wav");
         }
         playSFX("select");
       }
@@ -63,16 +64,22 @@ export function bindInputEvents(canvas) {
           state.lives = 3;
           state.score = 0;
           state.activeCampaignIdx = 0;
-          loadLevel(CAMPAIGN[0]);
-          state.gameState = STATE_PLAYING;
+          playSpeech("play.wav");
+          setTimeout(() => {
+            loadLevel(CAMPAIGN[0], true);
+            state.gameState = STATE_PLAYING;
+          }, 800);
         } 
         else if (state.titleMenuIndex === 1) {
+          playSpeech("select level.wav");
           document.getElementById("campaign-select-panel").style.display = "block";
         }
         else if (state.titleMenuIndex === 2) {
+          playSpeech("level editor.wav");
           toggleEditor(true);
         }
         else if (state.titleMenuIndex === 3) {
+          playSpeech("highscores.wav");
           state.gameState = STATE_HIGHSCORE;
         }
       }
@@ -141,6 +148,9 @@ export function bindInputEvents(canvas) {
       }
       if (e.key.toLowerCase() === "p") {
         state.paused = !state.paused;
+        if (state.paused) {
+          playSpeech("pause.wav");
+        }
       }
     }
     else if (state.gameState === STATE_EDITOR) {

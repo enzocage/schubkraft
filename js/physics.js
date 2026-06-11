@@ -1,5 +1,5 @@
 import { state, THEMES, STATE_PLAYING, STATE_LEVEL_COMPLETE, STATE_GAME_OVER, CAMPAIGN } from './constants.js?v=2';
-import { playSFX, updateTractorSound, updateDroneSound, updatePersistentSounds } from './audio.js?v=2';
+import { playSFX, updateTractorSound, updateDroneSound, updatePersistentSounds, playSpeech } from './audio.js?v=2';
 
 export function showNotification(msg) {
   state.textPromptMessage = msg;
@@ -14,8 +14,11 @@ export function addScorePopup(x, y, text, color) {
   });
 }
 
-export function loadLevel(levelData) {
+export function loadLevel(levelData, playIntroSpeech = false) {
   state.activeLevel = JSON.parse(JSON.stringify(levelData));
+  if (playIntroSpeech) {
+    playSpeech("get ready - game starts now.wav");
+  }
   
   state.ship.x = state.activeLevel.spawn.x;
   state.ship.y = state.activeLevel.spawn.y;
@@ -846,6 +849,8 @@ function updateProjectiles(dt) {
   }
 }
 
+let wasSuckingFuel = false;
+
 function updateEntities(dt) {
   if (!state.ship.alive) {
     state.ship.tractorBeamActive = false;
@@ -884,6 +889,7 @@ function updateEntities(dt) {
     state.ship.tractorTarget = null;
   }
 
+  let isSuckingFuel = false;
   if (state.ship.tractorBeamActive && state.ship.tractorTarget) {
     const target = state.ship.tractorTarget;
     const dx = target.x - state.ship.x;
@@ -892,6 +898,7 @@ function updateEntities(dt) {
 
     if (target.type === "fuel" && dist > 0) {
       suckingActive = true;
+      isSuckingFuel = true;
       const drain = Math.min(2.5, target.health * 100);
       state.ship.fuel = Math.min(state.activeLevel.fuel, state.ship.fuel + drain);
       target.health -= 0.02;
@@ -927,6 +934,7 @@ function updateEntities(dt) {
       if (dist < 29) {
         state.pod.attached = true;
         playSFX("podAttach");
+        playSpeech("pendulum coupled.wav");
         spawnSparks(state.pod.x, state.pod.y, "#00ffff", 12);
         spawnShockwave(state.pod.x, state.pod.y, "#00ffff");
         addScorePopup(state.pod.x, state.pod.y - 12, "GEKOPPELT!", "#00ffff");
@@ -935,6 +943,11 @@ function updateEntities(dt) {
       }
     }
   }
+
+  if (isSuckingFuel && !wasSuckingFuel) {
+    playSpeech("extra fuel.wav");
+  }
+  wasSuckingFuel = isSuckingFuel;
 
   updateTractorSound(state.ship.tractorBeamActive, suckingActive, state.ship.alive);
 
@@ -1005,7 +1018,7 @@ function triggerLevelComplete() {
     if (state.activeCampaignIdx === 0) {
       showNotification("KAMPAGNE GESCHAFFT! NEUE RUNDE");
     }
-    loadLevel(CAMPAIGN[state.activeCampaignIdx]);
+    loadLevel(CAMPAIGN[state.activeCampaignIdx], true);
     state.gameState = STATE_PLAYING;
   }, 3500);
 }

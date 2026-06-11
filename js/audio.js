@@ -600,6 +600,7 @@ async function doInitAudio() {
   sid = forge; // publish only when fully ready
   const musicLabel = mp3Elem ? MP3_PLAYLIST[playlistIndex] : (TRACKER_SONG ? TRACKER_SONG.title : "none");
   console.log(`SIDForge ready — ${Object.keys(SFX_BANK).length} SFX variants, Music: "${musicLabel}"`);
+  playSpeech("schubkraft coding by felix schmidt.wav");
 }
 
 export async function playNextTrack() {
@@ -661,6 +662,22 @@ export function playSFX(type) {
   // No fixed voice: let the allocator pick a free voice so one-shot SFX
   // don't constantly cut the engine/drone loops living on voice 2
   sid.playSfx(`${type}_v${variant}`);
+}
+
+let speechAudio = null;
+export function playSpeech(filename) {
+  if (!state.sfxEnabled) return;
+  try {
+    if (speechAudio) {
+      speechAudio.pause();
+      speechAudio = null;
+    }
+    speechAudio = new Audio('speech/' + filename);
+    speechAudio.volume = 1.0;
+    speechAudio.play().catch(err => console.log("Speech audio play failed:", err));
+  } catch (err) {
+    console.error("Error playing speech:", err);
+  }
 }
 
 export function updatePersistentSounds(thrustActive, fuelLeft, shipAlive) {
