@@ -717,6 +717,7 @@ function updateProjectiles(dt) {
             }
             spawnShockwave(ent.x, ent.y, "#00ffff");
             playSFX("select");
+            buildCollisionGrid();
             showNotification("TÜR SCHALTUNG");
           }
           else if (ent.health <= 0) {
